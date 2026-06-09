@@ -1,0 +1,19 @@
+train_0.jpg [{"transcription": "桂AL6S50", "points": [[86, 238], [181, 238],
+[181, 261], [86, 261]] }]
+train_1.jpg [{"transcription": "鄂A9L638", "points": [[178, 1008], [425, 1008],
+[425, 1099], [178, 1099]] }]
+train_2.jpg [{"transcription": "桂B0W532", "points": [[18, 430], [145, 430],
+[145, 505], [18, 505]] }]
+train_3.jpg [{"transcription": "桂AH15M6", "points": [[180, 759], [407, 759],
+[407, 822], [180, 822]] }]
+train_4.jpg [{"transcription": "吉AU78M0", "points": [[128, 653], [415, 653],
+[415, 748], [128, 748]] }]
+train_5.jpg [{"transcription": "桂AY1916", "points": [[330, 820], [529, 820],
+[529, 883], [330, 883]] }]
+train_6.jpg [{"transcription": "桂A052HT", "points": [[138, 537], [385, 537],
+[385, 640], [138, 640]] }]
+train_7.jpg [{"transcription": "桂NJB585", "points": [[0, 532], [203, 532], [203,
+607], [0, 607]] }]
+train_8.jpg [{"transcription": "鲁Q57H8T", "points": [[0, 708], [171, 708], [171,
+775], [0, 775]] }]
+train_9.jpg [{"transcription": "桂AU122B", "points": [[40, 746], [247, 746],[247, 809], [40, 809]] }]

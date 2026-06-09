@@ -1,0 +1,94 @@
+# YAML 示例文件
+# YAML 是一种人类可读的数据序列化格式，常用于配置文件
+
+# 1. 基本键值对
+name: 张三
+age: 25
+city: 北京
+is_student: false
+
+# 2. 字符串（引号可选，但有特殊字符时需要）
+greeting: "Hello, World!"
+description: |
+  这是一个多行字符串。
+  第二行内容。
+  第三行内容。
+
+# 3. 数字类型
+integer_value: 42
+float_value: 3.14
+hex_value: 0xFF
+scientific: 1.23e+4
+
+# 4. 布尔值
+active: true
+completed: false
+enabled: yes    # yes/no 也可表示布尔值
+disabled: no
+
+# 5. 空值
+empty_field: null
+another_null: ~
+
+# 6. 列表（数组）
+fruits:
+  - 苹果
+  - 香蕉
+  - 橙子
+  - 葡萄
+
+# 列表的另一种写法（流式）
+colors: [红色, 绿色, 蓝色]
+
+# 7. 对象（字典）
+person:
+  name: 李四
+  age: 30
+  address:
+    street: 长安街
+    city: 北京
+    zip: 100000
+
+# 8. 对象列表
+employees:
+  - name: 小王
+    department: 技术部
+    salary: 15000
+  - name: 小李
+    department: 市场部
+    salary: 12000
+  - name: 小张
+    department: 人事部
+    salary: 13000
+
+# 9. 锚点与引用（重复使用相同的值）
+default_settings: &defaults
+  timeout: 30
+  retries: 3
+  debug: false
+
+server1:
+  <<: *defaults
+  host: server1.example.com
+
+server2:
+  <<: *defaults
+  host: server2.example.com
+  timeout: 60    # 可以覆盖默认值
+
+# 10. 嵌套复杂结构
+database:
+  host: localhost
+  port: 5432
+  credentials:
+    username: admin
+    password: secret123
+  options:
+    - pool_size: 10
+      max_connections: 100
+    - backup_enabled: true
+      backup_path: /data/backup
+
+# 11. 日期和时间（自动解析）
+start_date: 2024-01-01
+meeting_time: 2024-06-15T14:30:00+08:00

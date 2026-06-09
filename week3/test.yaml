@@ -1,0 +1,7 @@
+train: D:\project\step1\week3\dataset\train
+val: D:\project\step1\week3\dataset\val
+nc: 3
+names:
+  0: smoke
+  1: drink
+  2: phone
