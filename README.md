@@ -2,7 +2,7 @@
 
 > **学员：** 钱富森  
 > **周期：** 2026.05.20 — 2026.06.25（6 周）  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 综合复习与考试
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 综合复习与小测验
 
 ---
 
@@ -15,7 +15,7 @@
 | **Week 3** | 06.01 - 06.05 | 文件与数据格式 | 文件 I/O、CSV/JSON/YAML/XML 解析、数据集管理 |
 | **Week 4** | 06.08 - 06.12 | 计算机视觉应用 | OpenCV 图像处理、特征匹配、IoU 计算、考试项目 |
 | **Week 5** | 06.15 - 06.18 | 深度学习入门 | 神经网络基础、前向传播、损失函数、PyTorch 张量运算、模型保存与加载 |
-| **Week 6** | 06.22 - 06.25 | 综合复习与考试 | Pandas 深入、KNN 算法、MySQL 数据库、PyTorch 神经网络、深度学习理论复习 |
+| **Week 6** | 06.22 - 06.25 | 综合复习与小测验 | Pandas 深入、KNN 算法、MySQL 数据库、PyTorch 神经网络、深度学习理论复习 |
 
 ---
 
@@ -41,7 +41,7 @@ step1/
 │
 ├── week4/          # 计算机视觉
 │   ├── 0608.ipynb ~ 0612.ipynb  — 逐日课程
-│   ├── exam.ipynb              — 期末考试：人脸特征检测
+│   ├── exam.ipynb              — 小测验：人脸特征检测
 │   ├── data/                   — 背景图与素材
 │   ├── file/                   — 特征向量文件
 │   ├── images/ & images_resized/ — 图片素材
@@ -53,12 +53,12 @@ step1/
 │   ├── model_weights.pth        — 训练好的模型权重
 │   └── img_data.txt             — 图片数据文本
 │
-├── week6/          # 综合复习与考试
+├── week6/          # 综合复习与小测验
 │   ├── 0622.ipynb              — Pandas 数据预处理与 KNN 算法详解
 │   ├── 0623.ipynb              — MySQL 数据库基础语法
 │   ├── 0624.ipynb              — Python 连接 MySQL 实战（PyMySQL）
 │   ├── 0625.ipynb              — PyTorch 神经网络拟合正弦函数
-│   ├── exam.ipynb              — 期末考试（深度学习理论 + 人脸特征检测）
+│   ├── exam.ipynb              — 小测验（深度学习理论 + 人脸特征检测）
 │   ├── zs03-学生管理系统.py     — 学生管理系统（MySQL 版）
 │   ├── mysql_db.py             — 数据库连接工具模块
 │   ├── titanic_train.csv        — Titanic 数据集
@@ -109,7 +109,7 @@ step1/
 - 模型定义、训练与保存（`model_weights.pth`）
 - 加载预训练模型进行推理
 
-### Week 6 — 综合复习与考试（06.22 - 06.25）
+### Week 6 — 综合复习与小测验（06.22 - 06.25）
 
 #### 6月22日 — Pandas 深入与 KNN 算法
 - **Pandas 数据预处理**：`isnull()` / `dropna()` / `fillna()` / `drop_duplicates()` / `apply()` / `map()` / `sort_values()` / `value_counts()`
@@ -133,7 +133,7 @@ step1/
 - 训练流程：前向传播 → 损失计算 → 反向传播 → 参数更新
 - 损失曲线可视化
 
-#### 期末考试 `exam.ipynb`
+#### 小测验 `exam.ipynb`（每两周一次）
 - **深度学习理论**：激活函数（Sigmoid/Tanh/ReLU/Leaky ReLU/Softmax/Swish）、欠拟合/拟合/过拟合、可微分张量与计算图、期望/方差/标准差、交叉熵损失与 MSE、SQL 练习题
 - **人脸特征检测**：`FaceFeatDetect` 类（欧氏距离相似度匹配，top-k 检索）
 
@@ -155,4 +155,4 @@ conda activate D:\project\step1\env
 
 - 每日课程涵盖 **`.ipynb`（Jupyter Notebook）**、**`.py`（纯 Python 脚本）** 和 **`.html`（导出页面）** 三种格式
 - 每日配套 **PDF 笔记** 以 `日期姓名.pdf` 命名
-- 期末考试 `exam.ipynb` 包含深度学习理论（激活函数、过拟合、交叉熵等）与人脸特征检测（欧氏距离匹配）等综合题目
+- 小测验 `exam.ipynb`（每两周一次）包含深度学习理论（激活函数、过拟合、交叉熵等）与人脸特征检测（欧氏距离匹配）等综合题目
