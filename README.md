@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.06.22（6 周）  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 数据分析与预处理
+> **周期：** 2026.05.20 — 2026.06.25（6 周）  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 综合复习与考试
 
 ---
 
@@ -15,7 +15,7 @@
 | **Week 3** | 06.01 - 06.05 | 文件与数据格式 | 文件 I/O、CSV/JSON/YAML/XML 解析、数据集管理 |
 | **Week 4** | 06.08 - 06.12 | 计算机视觉应用 | OpenCV 图像处理、特征匹配、IoU 计算、考试项目 |
 | **Week 5** | 06.15 - 06.18 | 深度学习入门 | 神经网络基础、前向传播、损失函数、PyTorch 张量运算、模型保存与加载 |
-| **Week 6** | 06.22 | 数据分析与预处理 | Pandas 高级功能：缺失值处理、去重、排序、映射、聚合统计 |
+| **Week 6** | 06.22 - 06.25 | 综合复习与考试 | Pandas 深入、KNN 算法、MySQL 数据库、PyTorch 神经网络、深度学习理论复习 |
 
 ---
 
@@ -53,8 +53,16 @@ step1/
 │   ├── model_weights.pth        — 训练好的模型权重
 │   └── img_data.txt             — 图片数据文本
 │
-├── week6/          # 数据分析与预处理
-│   └── 0622.ipynb              — Pandas 数据预处理综合演示
+├── week6/          # 综合复习与考试
+│   ├── 0622.ipynb              — Pandas 数据预处理与 KNN 算法详解
+│   ├── 0623.ipynb              — MySQL 数据库基础语法
+│   ├── 0624.ipynb              — Python 连接 MySQL 实战（PyMySQL）
+│   ├── 0625.ipynb              — PyTorch 神经网络拟合正弦函数
+│   ├── exam.ipynb              — 期末考试（深度学习理论 + 人脸特征检测）
+│   ├── zs03-学生管理系统.py     — 学生管理系统（MySQL 版）
+│   ├── mysql_db.py             — 数据库连接工具模块
+│   ├── titanic_train.csv        — Titanic 数据集
+│   └── MNIST_IMG_TOP9/         — MNIST 手写数字图片（测试/训练）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -101,20 +109,40 @@ step1/
 - 模型定义、训练与保存（`model_weights.pth`）
 - 加载预训练模型进行推理
 
-### Week 6 — 数据分析与预处理
-- **Pandas 高级功能**
-- 缺失值处理：`isnull()` / `dropna()` / `fillna()`
-- 重复数据处理：`drop_duplicates()`
-- 数据变换：`apply()` / `map()` / NumPy 函数
-- 排序：`sort_values()` / `sort_index()`
-- 数据探索：`unique()` / `value_counts()` / `isin()`
+### Week 6 — 综合复习与考试（06.22 - 06.25）
+
+#### 6月22日 — Pandas 深入与 KNN 算法
+- **Pandas 数据预处理**：`isnull()` / `dropna()` / `fillna()` / `drop_duplicates()` / `apply()` / `map()` / `sort_values()` / `value_counts()`
+- **KNN（K-近邻）算法**：核心思想（近朱者赤）、k 值选择、距离度量、优缺点
+- sklearn 实现 KNN 分类（Iris 数据集）
+
+#### 6月23日 — MySQL 数据库基础
+- MySQL CRUD（`CREATE` / `DROP` / `ALTER` / `INSERT` / `SELECT` / `UPDATE` / `DELETE`）
+- 数据类型、约束（`PRIMARY KEY` / `FOREIGN KEY` / `NOT NULL` / `UNIQUE` / `DEFAULT`）
+- 查询进阶：`WHERE` / `LIKE` / `ORDER BY` / `LIMIT` / `GROUP BY` / `HAVING` / 聚合函数
+- 表关联：`JOIN` / 子查询（`IN` / `EXISTS`）
+
+#### 6月24日 — Python 连接 MySQL 实战
+- **PyMySQL** 库操作 MySQL：连接配置、游标、事务提交
+- 学生管理系统（MySQL 版）：`zs03-学生管理系统.py`
+- 超市营业额 Excel 数据分析
+
+#### 6月25日 — PyTorch 神经网络实践
+- `nn.Sequential` 搭建全连接网络拟合正弦曲线
+- GPU 训练检测（`torch.cuda`）
+- 训练流程：前向传播 → 损失计算 → 反向传播 → 参数更新
+- 损失曲线可视化
+
+#### 期末考试 `exam.ipynb`
+- **深度学习理论**：激活函数（Sigmoid/Tanh/ReLU/Leaky ReLU/Softmax/Swish）、欠拟合/拟合/过拟合、可微分张量与计算图、期望/方差/标准差、交叉熵损失与 MSE、SQL 练习题
+- **人脸特征检测**：`FaceFeatDetect` 类（欧氏距离相似度匹配，top-k 检索）
 
 ---
 
 ## 🚀 运行环境
 
 - Python 3.x
-- 主要依赖：`numpy`, `opencv-python`, `pillow`, `matplotlib`, `gradio`, `pandas`, `pyyaml`
+- 主要依赖：`numpy`, `opencv-python`, `pillow`, `matplotlib`, `gradio`, `pandas`, `pyyaml`, `pymysql`, `torch`, `scikit-learn`
 
 ```bash
 # 激活虚拟环境（conda）
@@ -127,4 +155,4 @@ conda activate D:\project\step1\env
 
 - 每日课程涵盖 **`.ipynb`（Jupyter Notebook）**、**`.py`（纯 Python 脚本）** 和 **`.html`（导出页面）** 三种格式
 - 每日配套 **PDF 笔记** 以 `日期姓名.pdf` 命名
-- 期末考试 `exam.ipynb` 包含人脸特征检测、VOC 标注解析、IoU 计算、图像分割与合并等综合题目
+- 期末考试 `exam.ipynb` 包含深度学习理论（激活函数、过拟合、交叉熵等）与人脸特征检测（欧氏距离匹配）等综合题目
