@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Model checkpoints (large binary files)
+checkpoints/
+*.pth
+
+# VS Code
+.vscode/
+
+# Environment
+env/
