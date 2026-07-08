@@ -1,0 +1,28 @@
+# 模型权重文件（体积大，不纳入版本控制）
+*.pth
+*.pt
+
+# Checkpoint 目录
+checkpoints/
+
+# PDF 文档
+*.pdf
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 数据集目录
+data/
+
+# Jupyter Notebook 检查点
+.ipynb_checkpoints/
+
+# IDE/编辑器
+.vscode/
+.idea/
+
+# 系统文件
+Thumbs.db
+.DS_Store
