@@ -268,10 +268,11 @@
 
             data.results.forEach((r, i) => {
                 const cls = r.correct ? 'correct' : 'wrong';
+                const confPct = (r.confidence * 100).toFixed(1);
                 html += `<div class="result-item ${cls}">
                             <img src="/image/${encodeURIComponent(r.path)}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22114%22 height=%22114%22><rect fill=%22%23eee%22 width=%22114%22 height=%22114%22/></svg>'">
                             <div class="label">#${i+1} ${r.category}</div>
-                            <div class="dist">距离: ${r.distance.toFixed(4)}</div>
+                            <div class="dist">置信度: ${confPct}%</div>
                          </div>`;
             });
 

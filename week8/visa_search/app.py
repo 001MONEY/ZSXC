@@ -100,12 +100,13 @@ def api_search():
     query_filename = os.path.basename(img_path)
 
     result_list = []
-    for p, d in results:
+    for p, d, conf in results:
         res_cat = p.split('/')[0]
         result_list.append({
             'path': _resolve_path(p),
             'category': res_cat,
             'distance': float(d),
+            'confidence': float(conf),
             'correct': res_cat == query_cat,
         })
 
@@ -140,12 +141,13 @@ def api_search_upload():
 
     # 构造返回
     result_list = []
-    for p, d in results:
+    for p, d, conf in results:
         res_cat = p.split('/')[0]
         result_list.append({
             'path': _resolve_path(p),
             'category': res_cat,
             'distance': float(d),
+            'confidence': float(conf),
             'correct': False,   # 上传图片无真实标签
         })
 

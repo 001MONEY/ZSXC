@@ -73,9 +73,22 @@ def load(feat_file=FEAT_FILE):
 # ============================================================
 # 相似度检索
 # ============================================================
+def cosine_confidence(query_feat, features):
+    """
+    计算查询特征与库中所有特征的余弦相似度作为置信度。
+
+    余弦相似度范围 [-1, 1]，对 CNN 特征通常 > 0，裁剪到 [0, 1] 作为置信度。
+    """
+    # L2 归一化
+    q_norm = query_feat / (np.linalg.norm(query_feat) + 1e-8)
+    f_norm = features / (np.linalg.norm(features, axis=1, keepdims=True) + 1e-8)
+    sims = (f_norm @ q_norm).flatten()
+    return np.clip(sims, 0, 1)
+
+
 def search(query_feat, paths, features, top_k=5):
     """
-    以图搜图 — 欧氏距离 Top-K 检索。
+    以图搜图 — 欧氏距离 Top-K 检索 + 余弦相似度置信度。
 
     参数:
         query_feat: 查询特征向量 (numpy 数组)
@@ -83,12 +96,17 @@ def search(query_feat, paths, features, top_k=5):
         features: 特征库特征矩阵 (N, D)
         top_k: 返回前 k 个结果
     返回:
-        [(路径, 距离), ...]
+        [(路径, 距离, 置信度), ...]
     """
     query = query_feat.reshape(1, -1)
     distances = np.linalg.norm(features - query, axis=1)
+    confs = cosine_confidence(query_feat, features)
+
     sorted_idx = np.argsort(distances)[:top_k]
-    return [(paths[i], distances[i]) for i in sorted_idx]
+    results = []
+    for i in sorted_idx:
+        results.append((paths[i], distances[i], float(confs[i])))
+    return results
 
 
 # ============================================================

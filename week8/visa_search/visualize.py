@@ -22,7 +22,7 @@ def show_search(query_path, results, visa_root=VISA_ROOT):
 
     参数:
         query_path: 查询图片的相对路径 (cat/subset/filename)
-        results: feature_lib.search() 的返回结果
+        results: feature_lib.search() 的返回结果 [(path, dist, conf), ...]
     """
     query_cat = query_path.split('/')[0]
     actual_path = _resolve_path(query_path, visa_root)
@@ -45,14 +45,14 @@ def show_search(query_path, results, visa_root=VISA_ROOT):
 
     # ---- 检索结果 ----
     positions = [(0, 3), (0, 4), (1, 0), (1, 1), (1, 2)]
-    for i, (path, dist) in enumerate(results):
+    for i, (path, dist, conf) in enumerate(results):
         real_path = _resolve_path(path, visa_root)
         img = Image.open(real_path).convert('RGB')
 
         res_cat = path.split('/')[0]
         is_correct = (res_cat == query_cat)
         color = 'green' if is_correct else 'red'
-        title = f"#{i+1} {res_cat}\nd={dist:.4f}"
+        title = f"#{i+1} {res_cat}\nd={dist:.4f}\n置信度: {conf:.2%}"
 
         row, col = positions[i]
         axes[row, col].imshow(img)
@@ -76,8 +76,8 @@ def show_batch_results(query_paths, results_list, visa_root=VISA_ROOT):
     for query_path, results in zip(query_paths, results_list):
         q_cat = query_path.split('/')[0]
         print(f"\n  查询: {query_path}")
-        print(f"  {'排名':>4s} | {'检索结果':25s} | {'距离':>8s} | {'结果'}")
-        for i, (p, d) in enumerate(results):
+        print(f"  {'排名':>4s} | {'检索结果':25s} | {'距离':>8s} | {'置信度':>8s} | {'结果'}")
+        for i, (p, d, conf) in enumerate(results):
             res_cat = p.split('/')[0]
             ok = 'Yes' if res_cat == q_cat else 'No'
-            print(f"  {i+1:4d} | {p:25s} | {d:.4f}  | {ok}")
+            print(f"  {i+1:4d} | {p:25s} | {d:.4f}  | {conf:.2%}   | {ok}")
