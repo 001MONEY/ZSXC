@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.06.25（6 周）  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验
+> **周期：** 2026.05.20 — 2026.07.10（8 周）  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测
 
 ---
 
@@ -85,12 +85,16 @@ step1/
 │   ├── templates/              — HTML 模板
 │   └── net.py                  — 网络结构定义
 │
-├── week8/          # 经典 CNN 架构与实战
+├── week8/          # 经典 CNN 架构与实战 + VisA 工业异常检测
 │   ├── 0706.ipynb              — VGG、ResNet 理论 + 空洞卷积演示
 │   ├── 0707.ipynb              — VGG16/ResNet18/ResNet34 训练 CIFAR-10 & Oxford Pet
+│   ├── 0708.ipynb              — VisA 数据集分析与以图搜图系统
 │   ├── vgg16_cifar10_best.pth  — VGG16 CIFAR-10 最佳模型
 │   ├── resnet18_cifar10_best.pth — ResNet18 CIFAR-10 最佳模型
-│   └── resnet34_pet_best.pth   — ResNet34 Oxford Pet 最佳模型
+│   ├── resnet34_pet_best.pth   — ResNet34 Oxford Pet 最佳模型
+│   ├── checkpoints/            — 训练检查点（5 epoch + best + latest）
+│   ├── VisA/                   — VisA 工业异常检测数据集（12 类）
+│   └── visa_search/            — 基于内容的图像检索系统（Flask + PyTorch）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -170,7 +174,7 @@ step1/
 ## 🚀 运行环境
 
 - Python 3.x
-- 主要依赖：`numpy`, `opencv-python`, `pillow`, `matplotlib`, `gradio`, `pandas`, `pyyaml`, `pymysql`, `torch`, `scikit-learn`
+- 主要依赖：`numpy`, `opencv-python`, `pillow`, `matplotlib`, `gradio`, `pandas`, `pyyaml`, `pymysql`, `torch`, `torchvision`, `scikit-learn`, `flask`
 
 ```bash
 # 激活虚拟环境（conda）
@@ -228,3 +232,58 @@ conda activate D:\project\step1\env
 - **ResNet18 适配 CIFAR-10**：修改首层卷积（7×7 → 3×3）、移除 MaxPool
 - **ResNet34 二分类（Oxford Pet）**：自定义 `OxfordPetDataset`、ImageNet 预训练微调
 - **Oxford Pet 数据集**：37 种猫狗品种，二分类（猫 vs 狗），99.78% 测试准确率
+
+#### 7月8日 — VisA 工业异常检测与以图搜图
+- **VisA 数据集分析**：12 类工业产品（candle、capsules、pcb 等），含 Anomaly/Normal 图片及 Mask
+- **以图搜图系统**：基于 MobileNetV2 特征提取 + 余弦相似度检索
+- **图像检索全流程**：特征提取 → 特征库构建 → 相似度搜索 → Top-k 评估 → 可视化
+- **检索性能**：Top-1 ~75%+、Top-5 ~92%+（MobileNetV2 1280 维特征）
+- **Flask Web 应用**：`visa_search/app.py` — 上传图片检索相似样本，支持 Web 界面交互
+
+---
+
+## 🧪 VisA 以图搜图项目
+
+`visa_search/` 是一个基于内容的图像检索（CBIR）系统，在 VisA 工业异常检测数据集上实现相似图片搜索。
+
+### 项目结构
+
+```
+visa_search/
+├── main.py                  # 主入口：特征库构建 + 评估 + 演示
+├── model.py                 # 特征提取模型（MobileNetV2 / ResNet18）
+├── dataset.py               # 数据集样本收集与统计
+├── feature_lib.py           # 特征库构建、加载、搜索、评估
+├── config.py                # 配置文件（路径、模型、参数）
+├── app.py                   # Flask Web 应用（交互式检索）
+├── import_to_db.py          # 特征入库脚本
+├── visualize.py             # 可视化工具（检索结果展示）
+├── feats_visa.txt           # 预提取特征库文件
+├── static/                  # 静态资源
+└── templates/
+    └── index.html           # Web 前端页面
+```
+
+### 技术要点
+
+| 模块 | 技术 |
+|------|------|
+| 特征提取 | MobileNetV2（ImageNet 预训练），AdaptiveAvgPool 降维 |
+| 特征维度 | 1280 维 |
+| 相似度度量 | 余弦相似度 |
+| 检索策略 | 遍历特征库，按相似度降序排列取 Top-k |
+| 评估指标 | Top-1 / Top-5 准确率 |
+| Web 框架 | Flask + HTML/CSS/JS |
+
+### 运行方式
+
+```bash
+# 激活环境后，进入 visa_search 目录
+cd week8/visa_search
+
+# 完整流程：构建特征库 + 评估 + 演示
+python main.py
+
+# 启动 Web 交互界面
+python app.py
+```
