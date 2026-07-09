@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisA 以图搜图</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff; padding: 20px 0; text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        }
+        .header h1 { font-size: 28px; margin-bottom: 4px; }
+        .header p { font-size: 14px; opacity: 0.85; }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        /* ---- 分类标签 ---- */
+        .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; justify-content: center; }
+        .tabs a {
+            padding: 8px 20px; border-radius: 20px; text-decoration: none;
+            font-size: 14px; background: #fff; color: #555;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08); transition: all 0.2s;
+        }
+        .tabs a:hover { background: #667eea; color: #fff; transform: translateY(-1px); }
+        .tabs a.active { background: #667eea; color: #fff; font-weight: bold; }
+
+        .sub-tabs { text-align: center; margin-bottom: 16px; }
+        .sub-tabs a {
+            display: inline-block; padding: 4px 16px; margin: 0 4px;
+            border-radius: 12px; text-decoration: none; font-size: 13px;
+            background: #e8e8e8; color: #555; transition: all 0.2s;
+        }
+        .sub-tabs a:hover { background: #bbb; }
+        .sub-tabs a.active { background: #764ba2; color: #fff; }
+
+        /* ---- 图片网格 ---- */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px; margin-bottom: 30px;
+        }
+        .grid-item {
+            background: #fff; border-radius: 8px; overflow: hidden;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.08); cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .grid-item:hover { transform: scale(1.05); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+        .grid-item img { width: 100%; height: 120px; object-fit: cover; display: block; }
+        .grid-item .label { padding: 6px 8px; font-size: 11px; color: #666; text-align: center;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* ---- 查询 & 结果 ---- */
+        .search-section { display: none; }
+        .search-section.active { display: block; }
+
+        .result-panel {
+            background: #fff; border-radius: 12px; padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 24px;
+        }
+        .result-panel h2 { font-size: 18px; margin-bottom: 16px; color: #444; }
+
+        .result-row {
+            display: flex; gap: 20px; flex-wrap: wrap;
+        }
+        .query-box {
+            flex: 0 0 160px; text-align: center;
+        }
+        .query-box img {
+            width: 160px; height: 160px; object-fit: cover;
+            border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .query-box .label { margin-top: 6px; font-size: 12px; color: #888; }
+
+        .results-box {
+            flex: 1; display: flex; gap: 12px; flex-wrap: wrap;
+        }
+        .result-item {
+            width: 130px; text-align: center; background: #fafafa;
+            border-radius: 8px; padding: 8px; transition: transform 0.2s;
+        }
+        .result-item:hover { transform: translateY(-3px); }
+        .result-item img {
+            width: 114px; height: 114px; object-fit: cover;
+            border-radius: 6px;
+        }
+        .result-item .dist { font-size: 11px; color: #888; margin-top: 4px; }
+        .result-item .label { font-size: 12px; }
+        .result-item.correct { border: 2px solid #52c41a; }
+        .result-item.wrong  { border: 2px solid #ff4d4f; }
+
+        /* ---- 上传 ---- */
+        .upload-area {
+            border: 2px dashed #ccc; border-radius: 12px; padding: 40px;
+            text-align: center; cursor: pointer; transition: all 0.3s;
+            background: #fafafa; margin-bottom: 20px;
+        }
+        .upload-area:hover { border-color: #667eea; background: #f0f2ff; }
+        .upload-area input { display: none; }
+        .upload-area p { font-size: 16px; color: #999; margin-top: 8px; }
+
+        /* ---- 加载动画 ---- */
+        .loading { display: none; text-align: center; padding: 40px; }
+        .loading.active { display: block; }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #e0e0e0;
+            border-top-color: #667eea; border-radius: 50%;
+            animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .stats { text-align: center; font-size: 13px; color: #888; margin-bottom: 12px; }
+
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+            .grid-item img { height: 90px; }
+            .result-row { flex-direction: column; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>VisA 以图搜图</h1>
+        <p>点击图片搜索相似产品 · 支持上传自定义图片</p>
+    </div>
+
+    <div class="container">
+        <!-- 上传 -->
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept="image/*">
+            <div style="font-size:36px;">📁</div>
+            <p>点击上传图片进行搜索</p>
+        </div>
+
+        <!-- 分类标签 -->
+        <div class="tabs" id="tabs">
+            {% for cat in categories %}
+            <a href="#" class="{{ 'active' if loop.first else '' }}"
+               onclick="return loadCategory('{{ cat }}', this)">{{ cat }}</a>
+            {% endfor %}
+        </div>
+
+        <!-- 子集切换 -->
+        <div class="sub-tabs" id="subTabs">
+            <a href="#" class="active" onclick="return switchSubset('Normal', this)">Normal</a>
+            <a href="#" onclick="return switchSubset('Anomaly', this)">Anomaly</a>
+        </div>
+
+        <div class="stats" id="stats"></div>
+
+        <!-- 图片网格 -->
+        <div class="grid" id="grid"></div>
+
+        <!-- 加载 -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在搜索相似图片...</p>
+        </div>
+
+        <!-- 搜索结果 -->
+        <div class="search-section" id="resultSection">
+            <div class="result-panel" id="resultPanel"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentCategory = '{{ categories[0] }}';
+        let currentSubset = 'Normal';
+
+        // ---- 加载分类图片 ----
+        function loadCategory(cat, el) {
+            currentCategory = cat;
+            document.querySelectorAll('.tabs a').forEach(a => a.classList.remove('active'));
+            if (el) el.classList.add('active');
+            loadImages();
+            return false;
+        }
+
+        function switchSubset(sub, el) {
+            currentSubset = sub;
+            document.querySelectorAll('#subTabs a').forEach(a => a.classList.remove('active'));
+            if (el) el.classList.add('active');
+            loadImages();
+            return false;
+        }
+
+        function loadImages() {
+            const grid = document.getElementById('grid');
+            const stats = document.getElementById('stats');
+            const resultSection = document.getElementById('resultSection');
+            resultSection.classList.remove('active');
+            grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#999;">加载中...</div>';
+
+            fetch(`/api/images?category=${currentCategory}&subset=${currentSubset}`)
+                .then(r => r.json())
+                .then(data => {
+                    stats.textContent = `共 ${data.images.length} 张图片`;
+                    grid.innerHTML = '';
+                    data.images.forEach(img => {
+                        const div = document.createElement('div');
+                        div.className = 'grid-item';
+                        div.innerHTML = `<img src="/image/${encodeURIComponent(img.full_path)}" loading="lazy">
+                                         <div class="label">${img.filename}</div>`;
+                        div.onclick = () => searchImage(img.full_path, img.filename);
+                        grid.appendChild(div);
+                    });
+                });
+        }
+
+        // ---- 上传图片 ----
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('image', file);
+            searchUpload(formData);
+        });
+
+        // ---- 以图搜图 ----
+        function searchImage(fullPath, filename) {
+            const loading = document.getElementById('loading');
+            const resultSection = document.getElementById('resultSection');
+            loading.classList.add('active');
+            resultSection.classList.remove('active');
+
+            fetch('/api/search', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({image_path: fullPath})
+            })
+            .then(r => r.json())
+            .then(data => {
+                loading.classList.remove('active');
+                renderResults(data, filename);
+            });
+        }
+
+        function searchUpload(formData) {
+            const loading = document.getElementById('loading');
+            const resultSection = document.getElementById('resultSection');
+            loading.classList.add('active');
+            resultSection.classList.remove('active');
+
+            fetch('/api/search_upload', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                loading.classList.remove('active');
+                renderResults(data, '上传图片');
+            });
+        }
+
+        // ---- 渲染结果 ----
+        function renderResults(data, queryName) {
+            const resultSection = document.getElementById('resultSection');
+            const panel = document.getElementById('resultPanel');
+            resultSection.classList.add('active');
+
+            let html = `<h2>🔍 查询: ${queryName}</h2>
+                        <div class="result-row">
+                            <div class="query-box">
+                                <img src="${data.query_url}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><rect fill=%22%23eee%22 width=%22160%22 height=%22160%22/></svg>'">
+                                <div class="label">查询图片</div>
+                            </div>
+                            <div class="results-box">`;
+
+            data.results.forEach((r, i) => {
+                const cls = r.correct ? 'correct' : 'wrong';
+                html += `<div class="result-item ${cls}">
+                            <img src="/image/${encodeURIComponent(r.path)}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22114%22 height=%22114%22><rect fill=%22%23eee%22 width=%22114%22 height=%22114%22/></svg>'">
+                            <div class="label">#${i+1} ${r.category}</div>
+                            <div class="dist">距离: ${r.distance.toFixed(4)}</div>
+                         </div>`;
+            });
+
+            html += `</div></div>
+                     <div style="margin-top:12px;font-size:13px;color:#888;">
+                         Top-5 结果 · 绿色=同类 红色=异类
+                     </div>`;
+
+            panel.innerHTML = html;
+            window.scrollTo({ top: resultSection.offsetTop - 20, behavior: 'smooth' });
+        }
+
+        // ---- 初始加载 ----
+        loadImages();
+    </script>
+</body>
+</html>
