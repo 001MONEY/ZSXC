@@ -16,6 +16,9 @@ __pycache__/
 # 数据集目录
 data/
 
+# VisA 数据集（图片体积大，不上传）
+VisA/data/
+
 # Jupyter Notebook 检查点
 .ipynb_checkpoints/
 
