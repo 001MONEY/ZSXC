@@ -2,7 +2,7 @@
 
 > **学员：** 钱富森  
 > **周期：** 2026.05.20 — 2026.07.10（8 周）  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测
 
 ---
 
@@ -17,7 +17,7 @@
 | **Week 5** | 06.15 - 06.18 | 深度学习入门          | 神经网络基础、前向传播、损失函数、PyTorch 张量运算、模型保存与加载          |
 | **Week 6** | 06.22 - 06.25 | 深度学习入门与小测验      | Pandas 深入、KNN 算法、MySQL 数据库、PyTorch 神经网络、深度学习理论 |
 | **Week 7** | 06.29 - 07.03 | 深度学习进阶 - 卷积神经网络 | CNN 原理、卷积/池化、图像分类实战、PyTorch 模型训练调优             |
-| **Week 8** | 07.06 - 07.10 | 经典 CNN 架构与实战    | VGG、ResNet、空洞卷积、CIFAR-10 训练、Oxford Pet 二分类     |
+| **Week 8** | 07.06 - 07.10 | 经典 CNN 架构与实战    | VGG、ResNet、空洞卷积、CIFAR-10 训练、Oxford Pet 二分类、小黄人目标检测（全连接 vs 全卷积对比） |
 
 ---
 
@@ -85,14 +85,20 @@ step1/
 │   ├── templates/              — HTML 模板
 │   └── net.py                  — 网络结构定义
 │
-├── week8/          # 经典 CNN 架构与实战 + VisA 工业异常检测
-│   ├── 0706.ipynb              — VGG、ResNet 理论 + 空洞卷积演示
-│   ├── 0707.ipynb              — VGG16/ResNet18/ResNet34 训练 CIFAR-10 & Oxford Pet
-│   ├── 0708.ipynb              — VisA 数据集分析与以图搜图系统
-│   ├── vgg16_cifar10_best.pth  — VGG16 CIFAR-10 最佳模型
+├── week8/          # 经典 CNN 架构与实战 + VisA 工业异常检测 + 小黄人目标检测
+│   ├── 0706.ipynb               — VGG、ResNet 理论 + 空洞卷积演示
+│   ├── 0707.ipynb               — VGG16/ResNet18/ResNet34 训练 CIFAR-10 & Oxford Pet
+│   ├── 0708.ipynb               — VisA 数据集分析与以图搜图系统
+│   ├── 0710.ipynb               — 小黄人目标检测：数据集生成 → Dataset → 全连接版训练 → 推理 → 全卷积版对比
+│   ├── vgg16_cifar10_best.pth   — VGG16 CIFAR-10 最佳模型
 │   ├── resnet18_cifar10_best.pth — ResNet18 CIFAR-10 最佳模型
-│   ├── resnet34_pet_best.pth   — ResNet34 Oxford Pet 最佳模型
-│   ├── checkpoints/            — 训练检查点（5 epoch + best + latest）
+│   ├── resnet34_pet_best.pth    — ResNet34 Oxford Pet 最佳模型
+│   ├── checkpoints/             — 训练检查点（5 epoch + best + latest）
+│   ├── dataset/                 — 小黄人检测数据集
+│   │   ├── bg_pic/              — 背景图（20 张）
+│   │   ├── yellow/              — 小黄人 PNG（20 个，含透明通道）
+│   │   └── sample/              — 自动生成的训练/测试集（正负样本，YOLO 格式标注）
+│   ├── minion_detector_best.pth — 小黄人检测最佳模型权重
 │   ├── VisA/                   — VisA 工业异常检测数据集（12 类）
 │   └── visa_search/            — 基于内容的图像检索系统（Flask + PyTorch）
 │
@@ -232,6 +238,16 @@ step1/
 - **图像检索全流程**：特征提取 → 特征库构建 → 相似度搜索 → Top-k 评估 → 可视化
 - **检索性能**：Top-1 ~75%+、Top-5 ~92%+（MobileNetV2 1280 维特征）
 - **Flask Web 应用**：`visa_search/app.py` — 上传图片检索相似样本，支持 Web 界面交互
+
+#### 7月10日 — 小黄人单目标检测
+
+- **数据集自动生成**：20 张背景图 + 20 个小黄人 PNG（含透明通道）→ 合成正负样本，YOLO 格式标注
+- **数据增强**：随机位置/尺寸、水平翻转
+- **全连接版网络 (Net)**：8 层 Conv + MaxPool → Flatten → Linear(512,5)，输出 [x1,y1,x2,y2,conf]
+- **训练策略**：BCELoss（分类）+ MSELoss（回归，仅正样本），CosineAnnealingLR，~9.5M 参数
+- **推理回原图**：网络输出归一化坐标 → 反归一化 → 原图画框，完整流程演示
+- **全卷积版网络 (FullyConvNet V2)** ⭐：保留 9×9 Grid 空间，每个 Grid Cell 独立预测 → 取最高置信度 Cell 解码，~3.4M 参数，更轻量、更符合检测器本质
+- **拓展对比**：全连接版（FC head）vs 全卷积版（Conv head），参数量、收敛速度对比
 
 ---
 
