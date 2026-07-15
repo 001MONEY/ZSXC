@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Darknet-53 网络结构动态演示</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+        background: #0a0e17;
+        color: #e0e0e0;
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+
+    /* ========== Header ========== */
+    .header {
+        text-align: center;
+        padding: 40px 20px 30px;
+        background: linear-gradient(135deg, #0a0e17 0%, #1a1f2e 100%);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .header h1 {
+        font-size: 32px;
+        background: linear-gradient(90deg, #f7971e, #ffd200);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: 2px;
+    }
+    .header p {
+        margin-top: 8px;
+        color: #8899bb;
+        font-size: 15px;
+        letter-spacing: 1px;
+    }
+    .header .badge {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 4px 16px;
+        background: rgba(247,151,30,0.15);
+        border: 1px solid rgba(247,151,30,0.3);
+        border-radius: 20px;
+        font-size: 13px;
+        color: #f7971e;
+    }
+
+    /* ========== Controls ========== */
+    .controls {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+        flex-wrap: wrap;
+        background: rgba(255,255,255,0.02);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .controls button {
+        padding: 10px 28px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        letter-spacing: 0.5px;
+        font-family: inherit;
+    }
+    .btn-play {
+        background: linear-gradient(135deg, #f7971e, #ffd200);
+        color: #0a0e17;
+    }
+    .btn-play:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(247,151,30,0.3); }
+    .btn-play:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-reset {
+        background: rgba(255,255,255,0.08);
+        color: #b0b8c8;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn-reset:hover { background: rgba(255,255,255,0.15); color: #fff; }
+    .btn-speed {
+        background: rgba(255,255,255,0.05);
+        color: #8899bb;
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+    .btn-speed.active { background: rgba(247,151,30,0.15); border-color: rgba(247,151,30,0.3); color: #f7971e; }
+    .btn-step {
+        background: rgba(0,200,255,0.1);
+        color: #00c8ff;
+        border: 1px solid rgba(0,200,255,0.2);
+    }
+    .btn-step:hover { background: rgba(0,200,255,0.2); }
+    .controls .step-info {
+        color: #8899bb;
+        font-size: 14px;
+        min-width: 120px;
+        text-align: center;
+    }
+
+    /* ========== Main Canvas ========== */
+    .main-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 30px 20px 40px;
+    }
+    #networkCanvas {
+        background: #0d1220;
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,0.06);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        max-width: 100%;
+        width: 1100px;
+        height: 650px;
+    }
+
+    /* ========== Info Panel ========== */
+    .info-panel {
+        display: flex;
+        gap: 20px;
+        margin-top: 24px;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 1100px;
+        width: 100%;
+    }
+    .info-card {
+        background: #111827;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
+        padding: 18px 24px;
+        min-width: 200px;
+        flex: 1;
+        text-align: center;
+        transition: all 0.4s;
+    }
+    .info-card.highlight {
+        border-color: rgba(247,151,30,0.4);
+        box-shadow: 0 0 30px rgba(247,151,30,0.1);
+        background: rgba(247,151,30,0.05);
+    }
+    .info-card .label { font-size: 12px; color: #667799; text-transform: uppercase; letter-spacing: 1px; }
+    .info-card .value { font-size: 22px; font-weight: 700; margin-top: 6px; }
+    .info-card .sub { font-size: 13px; color: #8899bb; margin-top: 4px; }
+
+    /* ========== Responsive ========== */
+    @media (max-width: 768px) {
+        #networkCanvas { height: 450px; }
+        .header h1 { font-size: 24px; }
+        .controls button { padding: 8px 18px; font-size: 13px; }
+    }
+
+    /* ========== Tooltip ========== */
+    .tooltip {
+        position: fixed;
+        background: rgba(15,20,35,0.95);
+        border: 1px solid rgba(247,151,30,0.3);
+        border-radius: 10px;
+        padding: 14px 18px;
+        max-width: 320px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s;
+        z-index: 1000;
+        backdrop-filter: blur(10px);
+    }
+    .tooltip.visible { opacity: 1; }
+    .tooltip h4 { color: #f7971e; font-size: 14px; margin-bottom: 6px; }
+    .tooltip p { color: #b0b8c8; font-size: 13px; line-height: 1.5; }
+    .tooltip .detail { color: #667799; font-size: 12px; margin-top: 6px; font-family: monospace; }
+</style>
+</head>
+<body>
+
+<!-- ===== Header ===== -->
+<div class="header">
+    <h1>🔬 Darknet-53 网络结构</h1>
+    <p>YOLOv3 骨干网络 · 交互式动态演示</p>
+    <span class="badge">53 层卷积 · 3 尺度检测 · 残差连接</span>
+</div>
+
+<!-- ===== Controls ===== -->
+<div class="controls">
+    <button class="btn-play" id="playBtn" onclick="togglePlay()">▶ 自动演示</button>
+    <button class="btn-step" onclick="nextStep()">⏭ 单步前进</button>
+    <button class="btn-reset" onclick="resetDemo()">⟲ 重置</button>
+    <div class="step-info" id="stepInfo">步骤 0 / 10</div>
+    <button class="btn-speed active" data-speed="1500" onclick="setSpeed(this, 1500)">慢</button>
+    <button class="btn-speed" data-speed="900" onclick="setSpeed(this, 900)">中</button>
+    <button class="btn-speed" data-speed="400" onclick="setSpeed(this, 400)">快</button>
+</div>
+
+<!-- ===== Canvas ===== -->
+<div class="main-container">
+    <canvas id="networkCanvas"></canvas>
+
+    <div class="info-panel">
+        <div class="info-card" id="card_stage">
+            <div class="label">当前阶段</div>
+            <div class="value" style="color:#f7971e;" id="stageName">Input</div>
+            <div class="sub" id="stageDesc">输入图像 3×416×416</div>
+        </div>
+        <div class="info-card" id="card_shape">
+            <div class="label">特征图尺寸</div>
+            <div class="value" style="color:#00c8ff;" id="shapeDisplay">416×416</div>
+            <div class="sub" id="channelDisplay">通道数: 3</div>
+        </div>
+        <div class="info-card" id="card_downsample">
+            <div class="label">下采样倍数</div>
+            <div class="value" style="color:#7c3aed;" id="downsampleDisplay">1×</div>
+            <div class="sub" id="downsampleDesc">原始分辨率</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Tooltip ===== -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ============================================================
+// 1. DATA — Darknet-53 各阶段定义
+// ============================================================
+const stages = [
+    {
+        id: 'input',
+        label: 'Input',
+        desc: '输入图像',
+        channels: 3,
+        size: 416,
+        downsample: 1,
+        color: '#4a9eff',
+        detail: '标准 YOLOv3 输入尺寸 3×416×416',
+        blocks: []
+    },
+    {
+        id: 'stage0',
+        label: 'Stage 0',
+        desc: 'Conv 3×3, stride=1',
+        channels: 32,
+        size: 416,
+        downsample: 1,
+        color: '#f7971e',
+        detail: '初始卷积层，将 3 通道映射到 32 通道，不改变空间尺寸',
+        blocks: ['Conv 3×3']
+    },
+    {
+        id: 'stage1',
+        label: 'Stage 1',
+        desc: 'Conv↓ + Res×1',
+        channels: 64,
+        size: 208,
+        downsample: 2,
+        color: '#e74c3c',
+        detail: '3×3 stride=2 下采样 + 1 个残差块，尺寸减半',
+        blocks: ['Conv 3×3 s2', 'ResBlock×1']
+    },
+    {
+        id: 'stage2',
+        label: 'Stage 2',
+        desc: 'Conv↓ + Res×2',
+        channels: 128,
+        size: 104,
+        downsample: 4,
+        color: '#2ecc71',
+        detail: '下采样到 104×104，2 个残差块堆叠',
+        blocks: ['Conv 3×3 s2', 'ResBlock×2']
+    },
+    {
+        id: 'stage3',
+        label: 'Stage 3',
+        desc: 'Conv↓ + Res×8  ← 尺度1',
+        channels: 256,
+        size: 52,
+        downsample: 8,
+        color: '#f1c40f',
+        detail: '🎯 第一个检测尺度！下采样 8 倍，52×52 用于检测小目标',
+        blocks: ['Conv 3×3 s2', 'ResBlock×8'],
+        is_scale: true,
+        scale_name: '检测尺度 1 (小目标)'
+    },
+    {
+        id: 'stage4',
+        label: 'Stage 4',
+        desc: 'Conv↓ + Res×8  ← 尺度2',
+        channels: 512,
+        size: 26,
+        downsample: 16,
+        color: '#9b59b6',
+        detail: '🎯 第二个检测尺度！下采样 16 倍，26×26 用于检测中目标',
+        blocks: ['Conv 3×3 s2', 'ResBlock×8'],
+        is_scale: true,
+        scale_name: '检测尺度 2 (中目标)'
+    },
+    {
+        id: 'stage5',
+        label: 'Stage 5',
+        desc: 'Conv↓ + Res×4  ← 尺度3',
+        channels: 1024,
+        size: 13,
+        downsample: 32,
+        color: '#e67e22',
+        detail: '🎯 第三个检测尺度！下采样 32 倍，13×13 用于检测大目标',
+        blocks: ['Conv 3×3 s2', 'ResBlock×4'],
+        is_scale: true,
+        scale_name: '检测尺度 3 (大目标)'
+    },
+    {
+        id: 'head',
+        label: 'YOLO Head',
+        desc: '检测头 (类别数×3)',
+        channels: 255,
+        size: 13,
+        downsample: 32,
+        color: '#ff6b6b',
+        detail: 'YOLOv3 检测头: 3×(5+80) = 255 通道，每个格子预测 3 个框',
+        blocks: ['Conv 1×1']
+    }
+];
+
+// ============================================================
+// 2. CANVAS SETUP
+// ============================================================
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    W = rect.width;
+    H = rect.height;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+}
+resizeCanvas();
+window.addEventListener('resize', () => { resizeCanvas(); draw(); });
+
+// ============================================================
+// 3. STATE
+// ============================================================
+let currentStep = -1;        // -1 = idle/reset
+let isPlaying = false;
+let playTimer = null;
+let animSpeed = 1500;
+let hoveredStage = -1;
+let particles = [];
+let flowProgress = 0;       // 0..1 数据流动画进度
+
+// ============================================================
+// 4. DRAWING
+// ============================================================
+function getStageX(index) {
+    const total = stages.length;
+    const padding = 60;
+    const gap = (W - padding * 2) / (total - 1);
+    return padding + index * gap;
+}
+
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Background grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += 40) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    // Draw connections first
+    drawConnections();
+
+    // Draw stages
+    stages.forEach((s, i) => {
+        const isActive = i <= currentStep && currentStep >= 0;
+        const isCurrent = i === currentStep;
+        const isHover = hoveredStage === i;
+        drawStage(i, isActive, isCurrent, isHover);
+    });
+
+    // Draw particles
+    drawParticles();
+
+    // Draw legend for detection scales
+    if (currentStep >= 0) {
+        drawLegend();
+    }
+}
+
+function drawStage(index, isActive, isCurrent, isHover) {
+    const s = stages[index];
+    const x = getStageX(index);
+    const y = H / 2;
+
+    // Size of the block
+    const baseW = 70;
+    const baseH = 70;
+    const scale = isCurrent ? 1.15 : (isHover ? 1.08 : 1);
+    const w = baseW * scale;
+    const h = baseH * scale;
+    const rx = 12;
+
+    // Glow for active/current
+    if (isCurrent) {
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, 70);
+        grad.addColorStop(0, s.color + '33');
+        grad.addColorStop(1, s.color + '00');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x - 70, y - 70, 140, 140);
+    }
+
+    // === Block body ===
+    // Background
+    ctx.fillStyle = isActive ? (s.color + '22') : 'rgba(255,255,255,0.03)';
+    ctx.strokeStyle = isActive ? s.color : 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = isCurrent ? 3 : (isActive ? 2 : 1);
+    roundRect(ctx, x - w/2, y - h/2, w, h, rx);
+    ctx.fill();
+    ctx.stroke();
+
+    // Inner glow for detection scales
+    if (s.is_scale && isActive) {
+        ctx.strokeStyle = s.color + '44';
+        ctx.lineWidth = 1;
+        roundRect(ctx, x - w/2 + 4, y - h/2 + 4, w - 8, h - 8, rx - 2);
+        ctx.stroke();
+    }
+
+    // === Block content ===
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Stage label
+    ctx.fillStyle = isActive ? '#fff' : 'rgba(255,255,255,0.4)';
+    ctx.font = `bold ${isCurrent ? 15 : 13}px 'Microsoft YaHei', sans-serif`;
+    ctx.fillText(s.label, x, y - h/2 + 18);
+
+    // Size info
+    ctx.fillStyle = isActive ? (s.color || '#8899bb') : 'rgba(255,255,255,0.25)';
+    ctx.font = `${isCurrent ? 12 : 11}px monospace`;
+    ctx.fillText(`${s.size}×${s.size}`, x, y - h/2 + 38);
+
+    // Channel
+    ctx.fillStyle = isActive ? '#8899bb' : 'rgba(255,255,255,0.2)';
+    ctx.font = '10px monospace';
+    ctx.fillText(`${s.channels}ch`, x, y - h/2 + 54);
+
+    // Detection scale marker
+    if (s.is_scale && isActive) {
+        const markerY = y + h/2 - 14;
+        ctx.fillStyle = s.color;
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillText('▼ 尺度', x, markerY);
+
+        // Small arrow pulse
+        const pulse = Math.sin(Date.now() / 400) * 0.3 + 0.7;
+        ctx.fillStyle = s.color + Math.floor(pulse * 80).toString(16).padStart(2, '0');
+        ctx.font = '9px sans-serif';
+        ctx.fillText(s.scale_name, x, markerY + 16);
+    }
+
+    // Block type icons inside
+    if (s.blocks && isActive) {
+        const blockY = y + 2;
+        s.blocks.forEach((b, bi) => {
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.font = '9px monospace';
+            ctx.fillText(b, x, blockY + bi * 14);
+        });
+    }
+
+    // === Data flow indicator ===
+    if (isActive && index > 0 && index <= currentStep) {
+        drawFlowBetween(index - 1, index);
+    }
+}
+
+function drawFlowBetween(fromIdx, toIdx) {
+    const x1 = getStageX(fromIdx);
+    const x2 = getStageX(toIdx);
+    const y = H / 2;
+    const progress = (flowProgress * 0.7 + 0.15);
+
+    // Down arrow
+    const arrowY = y - 50;
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = '#4a9eff';
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('▶', (x1 + x2) / 2, arrowY);
+
+    // Downsample label
+    const s = stages[toIdx];
+    if (s.downsample > stages[fromIdx].downsample) {
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(`↓2× (${stages[fromIdx].size}→${s.size})`, (x1 + x2) / 2, arrowY + 20);
+    }
+    ctx.restore();
+}
+
+function drawConnections() {
+    stages.forEach((s, i) => {
+        if (i === 0) return;
+        const x1 = getStageX(i - 1);
+        const x2 = getStageX(i);
+        const y = H / 2;
+
+        const isActive = i <= currentStep && currentStep >= 0;
+
+        ctx.beginPath();
+        ctx.moveTo(x1 + 35, y);
+        ctx.lineTo(x2 - 35, y);
+
+        if (isActive) {
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            ctx.lineWidth = 2;
+            // Dashed with gradient
+            const grad = ctx.createLinearGradient(x1, y, x2, y);
+            grad.addColorStop(0, 'rgba(255,255,255,0.05)');
+            grad.addColorStop(0.5, 'rgba(255,255,255,0.15)');
+            grad.addColorStop(1, 'rgba(255,255,255,0.05)');
+            ctx.strokeStyle = grad;
+        } else {
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 1;
+        }
+        ctx.stroke();
+
+        // Arrow head
+        if (isActive) {
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.beginPath();
+            ctx.moveTo(x2 - 35, y);
+            ctx.lineTo(x2 - 42, y - 5);
+            ctx.lineTo(x2 - 42, y + 5);
+            ctx.closePath();
+            ctx.fill();
+        }
+    });
+}
+
+function drawLegend() {
+    const legendX = 20;
+    const legendY = H - 70;
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    roundRect(ctx, legendX, legendY, 200, 55, 8);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('● 检测尺度', legendX + 12, legendY + 8);
+
+    const colors = ['#f1c40f', '#9b59b6', '#e67e22'];
+    const labels = ['52×52 小目标', '26×26 中目标', '13×13 大目标'];
+    colors.forEach((c, i) => {
+        const y = legendY + 26 + i * 10;
+        ctx.fillStyle = c;
+        ctx.fillRect(legendX + 12, y, 6, 6);
+        ctx.fillStyle = '#8899bb';
+        ctx.font = '9px sans-serif';
+        ctx.fillText(labels[i], legendX + 24, y - 2);
+    });
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+// ============================================================
+// 5. PARTICLES (数据流粒子)
+// ============================================================
+function spawnParticles() {
+    if (currentStep <= 0) return;
+    const fromIdx = currentStep - 1;
+    const toIdx = currentStep;
+    const x1 = getStageX(fromIdx);
+    const x2 = getStageX(toIdx);
+    const y = H / 2;
+
+    for (let i = 0; i < 8; i++) {
+        particles.push({
+            x: x1 + 35,
+            y: y + (Math.random() - 0.5) * 20,
+            targetX: x2 - 35,
+            targetY: y + (Math.random() - 0.5) * 20,
+            progress: Math.random() * 0.3,
+            speed: 0.02 + Math.random() * 0.025,
+            size: 2 + Math.random() * 3,
+            color: stages[toIdx].color || '#4a9eff',
+            life: 1
+        });
+    }
+}
+
+function drawParticles() {
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+        p.progress += p.speed;
+        p.life = 1 - p.progress * 0.3;
+        if (p.progress > 1) { p.life = 0; return; }
+
+        const x = p.x + (p.targetX - p.x) * p.progress;
+        const y = p.y + (p.targetY - p.y) * p.progress;
+
+        ctx.save();
+        ctx.globalAlpha = p.life * 0.8;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(x, y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+}
+
+// ============================================================
+// 6. STEP LOGIC
+// ============================================================
+function goToStep(step) {
+    currentStep = Math.max(-1, Math.min(step, stages.length - 1));
+    updateUI();
+    spawnParticles();
+    draw();
+}
+
+function nextStep() {
+    if (currentStep < stages.length - 1) {
+        goToStep(currentStep + 1);
+    } else {
+        stopPlay();
+    }
+    document.getElementById('stepInfo').textContent = `步骤 ${currentStep + 1} / ${stages.length}`;
+}
+
+function resetDemo() {
+    stopPlay();
+    currentStep = -1;
+    particles = [];
+    flowProgress = 0;
+    document.getElementById('stepInfo').textContent = '步骤 0 / ' + stages.length;
+    updateUI();
+    draw();
+}
+
+// ============================================================
+// 7. PLAYBACK
+// ============================================================
+function togglePlay() {
+    if (isPlaying) {
+        stopPlay();
+    } else {
+        startPlay();
+    }
+}
+
+function startPlay() {
+    if (currentStep >= stages.length - 1) resetDemo();
+    isPlaying = true;
+    document.getElementById('playBtn').textContent = '⏸ 暂停';
+    document.getElementById('playBtn').classList.add('playing');
+    stepPlay();
+}
+
+function stopPlay() {
+    isPlaying = false;
+    if (playTimer) { clearTimeout(playTimer); playTimer = null; }
+    document.getElementById('playBtn').textContent = '▶ 自动演示';
+    document.getElementById('playBtn').classList.remove('playing');
+}
+
+function stepPlay() {
+    if (!isPlaying) return;
+    if (currentStep < stages.length - 1) {
+        nextStep();
+        playTimer = setTimeout(stepPlay, animSpeed);
+    } else {
+        stopPlay();
+        document.getElementById('stepInfo').textContent = '✅ 完成';
+    }
+}
+
+function setSpeed(el, ms) {
+    animSpeed = ms;
+    document.querySelectorAll('.btn-speed').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+}
+
+// ============================================================
+// 8. UI UPDATE
+// ============================================================
+function updateUI() {
+    if (currentStep < 0) {
+        document.getElementById('stageName').textContent = '—';
+        document.getElementById('stageDesc').textContent = '点击 "自动演示" 或 "单步前进" 开始';
+        document.getElementById('shapeDisplay').textContent = '—';
+        document.getElementById('channelDisplay').textContent = '—';
+        document.getElementById('downsampleDisplay').textContent = '—';
+        document.getElementById('downsampleDesc').textContent = '—';
+        document.querySelectorAll('.info-card').forEach(c => c.classList.remove('highlight'));
+        return;
+    }
+
+    const s = stages[currentStep];
+    document.getElementById('stageName').textContent = s.label;
+    document.getElementById('stageDesc').textContent = s.desc + (s.is_scale ? ' 🎯' : '');
+    document.getElementById('shapeDisplay').textContent = `${s.size} × ${s.size}`;
+    document.getElementById('channelDisplay').textContent = `通道数: ${s.channels}`;
+    document.getElementById('downsampleDisplay').textContent = `${s.downsample}×`;
+    document.getElementById('downsampleDesc').textContent =
+        s.downsample === 1 ? '原始分辨率' :
+        s.downsample === 32 ? '最大下采样' :
+        `下采样 ${s.downsample} 倍`;
+
+    document.querySelectorAll('.info-card').forEach(c => c.classList.remove('highlight'));
+    document.getElementById('card_stage').classList.add('highlight');
+    document.getElementById('card_shape').classList.add('highlight');
+    document.getElementById('card_downsample').classList.add('highlight');
+}
+
+// ============================================================
+// 9. MOUSE INTERACTION
+// ============================================================
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    let found = -1;
+    stages.forEach((s, i) => {
+        const x = getStageX(i);
+        const y = H / 2;
+        const dist = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
+        if (dist < 45) found = i;
+    });
+
+    if (found !== hoveredStage) {
+        hoveredStage = found;
+        canvas.style.cursor = found >= 0 ? 'pointer' : 'default';
+        showTooltip(found, e.clientX, e.clientY);
+        draw();
+    }
+
+    // Update tooltip position
+    if (found >= 0) {
+        const tooltip = document.getElementById('tooltip');
+        tooltip.style.left = (e.clientX + 15) + 'px';
+        tooltip.style.top = (e.clientY + 15) + 'px';
+    }
+});
+
+canvas.addEventListener('mouseleave', () => {
+    hoveredStage = -1;
+    document.getElementById('tooltip').classList.remove('visible');
+    draw();
+});
+
+canvas.addEventListener('click', () => {
+    if (hoveredStage >= 0 && hoveredStage !== currentStep) {
+        goToStep(hoveredStage);
+        document.getElementById('stepInfo').textContent = `步骤 ${currentStep + 1} / ${stages.length}`;
+    }
+});
+
+function showTooltip(index, cx, cy) {
+    const tooltip = document.getElementById('tooltip');
+    if (index < 0) { tooltip.classList.remove('visible'); return; }
+    const s = stages[index];
+    let html = `<h4>${s.label}</h4>`;
+    html += `<p>${s.detail}</p>`;
+    html += `<div class="detail">📐 ${s.size}×${s.size}  |  📊 ${s.channels}ch  |  🔽 ${s.downsample}×</div>`;
+    if (s.is_scale) {
+        html += `<div class="detail" style="color:${s.color}">🎯 ${s.scale_name}</div>`;
+    }
+    if (s.blocks) {
+        html += `<div class="detail">└─ ${s.blocks.join(' → ')}</div>`;
+    }
+    tooltip.innerHTML = html;
+    tooltip.style.left = (cx + 15) + 'px';
+    tooltip.style.top = (cy + 15) + 'px';
+    tooltip.classList.add('visible');
+}
+
+// ============================================================
+// 10. RESIDUAL BLOCK INSET (小窗展示残差块结构)
+// ============================================================
+function drawResidualInset() {
+    // Only show when a stage with ResBlock is active
+    if (currentStep < 1) return;
+    const s = stages[currentStep];
+    if (!s.blocks || !s.blocks.some(b => b.includes('ResBlock'))) return;
+
+    const ix = W - 170;
+    const iy = 20;
+    const iw = 150;
+    const ih = 110;
+
+    ctx.fillStyle = 'rgba(15,20,35,0.85)';
+    roundRect(ctx, ix, iy, iw, ih, 8);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    roundRect(ctx, ix, iy, iw, ih, 8);
+    ctx.stroke();
+
+    ctx.fillStyle = '#667799';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('残差块结构', ix + iw/2, iy + 8);
+
+    // Mini diagram
+    const cx2 = ix + iw/2;
+    const startY = iy + 24;
+    const boxW = 60;
+    const boxH = 16;
+    const gap = 18;
+
+    // Conv 1×1
+    ctx.fillStyle = 'rgba(247,151,30,0.3)';
+    ctx.strokeStyle = '#f7971e';
+    ctx.lineWidth = 1;
+    roundRect(ctx, cx2 - boxW/2, startY, boxW, boxH, 4);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = '8px sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Conv 1×1', cx2, startY + boxH/2);
+
+    // Arrow
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('↓', cx2, startY + boxH + 4);
+
+    // Conv 3×3
+    ctx.fillStyle = 'rgba(46,204,113,0.3)';
+    ctx.strokeStyle = '#2ecc71';
+    roundRect(ctx, cx2 - boxW/2, startY + boxH + gap - 6, boxW, boxH, 4);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = '8px sans-serif';
+    ctx.fillText('Conv 3×3', cx2, startY + boxH + gap);
+
+    // Plus
+    ctx.fillStyle = '#ff6b6b';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('⊕', cx2, startY + boxH*2 + gap + 2);
+}
+
+// Override draw to include inset
+const originalDraw = draw;
+draw = function() {
+    originalDraw();
+    drawResidualInset();
+};
+
+// ============================================================
+// 11. INIT
+// ============================================================
+resetDemo();
+
+// Animate loop
+function animate() {
+    flowProgress = (flowProgress + 0.005) % 1;
+    if (currentStep >= 0) draw();
+    requestAnimationFrame(animate);
+}
+animate();
+
+</script>
+</body>
+</html>

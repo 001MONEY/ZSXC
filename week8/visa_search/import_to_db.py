@@ -1,11 +1,18 @@
 """
-VisA 数据集 → 导入 MySQL
+VisA 数据集 → 导入 MySQL（含特征向量）
 
-将 VisA 数据集的图片信息导入到 MySQL 数据库，
-包含: 类别名称、子集(Normal/Anomaly)、图片文件名、图片路径。
+将 VisA 数据集的图片信息 + 特征向量导入到 MySQL 数据库。
+特征向量由 MobileNetV2 模型提取（1280 维），以 BLOB 二进制格式存储。
 """
 import os
+import sys
+import numpy as np
 import pymysql
+
+# 添加项目根目录到路径
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import VISA_ROOT, CATEGORIES, SUBSETS, DEVICE
+from model import FeatureExtractor
 
 # ============================================================
 # 数据库配置（根据实际情况修改）
@@ -20,15 +27,7 @@ config = {
     "cursorclass": pymysql.cursors.DictCursor
 }
 
-# ============================================================
-# VisA 数据集路径
-# ============================================================
-VISA_ROOT = r'D:\project\step1\week8\VisA\data\VisA_20220922'
-CATEGORIES = [
-    'candle', 'capsules', 'cashew', 'chewinggum', 'fryum',
-    'macaroni1', 'macaroni2', 'pcb1', 'pcb2', 'pcb3', 'pcb4', 'pipe_fryum',
-]
-SUBSETS = ['Normal', 'Anomaly']
+FEAT_DIM = 1280                      # MobileNetV2 特征维度
 
 
 # ============================================================
@@ -50,7 +49,7 @@ def create_database():
 
 
 def create_table():
-    """创建图片信息表"""
+    """创建图片信息表（含 features 字段）"""
     conn = pymysql.connect(**config)
     with conn.cursor() as cursor:
         cursor.execute("""
@@ -60,25 +59,36 @@ def create_table():
                 subset      VARCHAR(10)  NOT NULL COMMENT '子集 (Normal/Anomaly)',
                 filename    VARCHAR(100) NOT NULL COMMENT '图片文件名',
                 full_path   VARCHAR(300) NOT NULL COMMENT '图片绝对路径',
+                features    BLOB                  COMMENT '1280 维特征向量 (binary)',
                 created_at  DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '导入时间',
-                
+
                 INDEX idx_category (category),
                 INDEX idx_subset (subset)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """)
-        print("  表 images 已就绪")
+        print("  表 images 已就绪（含 features 字段）")
     conn.close()
 
 
 # ============================================================
-# 2. 遍历 VisA 并插入数据
+# 2. 遍历 VisA 并插入数据（含特征提取）
 # ============================================================
 def import_images():
     """
-    遍历 VisA 数据集，将图片信息写入 MySQL。
+    遍历 VisA 数据集，提取特征并写入 MySQL。
+
+    流程:
+      1. 加载 MobileNetV2 特征提取器
+      2. 清空旧数据
+      3. 遍历每个类别/子集，提取每张图片的特征
+      4. 将图片信息 + 特征向量存入数据库
 
     每次运行前会清空旧数据，避免重复导入。
     """
+    # ---- 加载特征提取器 ----
+    print("  加载特征提取模型...")
+    extractor = FeatureExtractor(model_name='mobilenet_v2')
+
     conn = pymysql.connect(**config)
     cursor = conn.cursor()
 
@@ -88,6 +98,7 @@ def import_images():
 
     # 遍历数据集
     total = 0
+    errors = 0
     for cat in CATEGORIES:
         cat_path = os.path.join(VISA_ROOT, cat, 'Data', 'Images')
         if not os.path.exists(cat_path):
@@ -102,12 +113,27 @@ def import_images():
             for img_name in sorted(os.listdir(subset_path)):
                 full_path = os.path.join(subset_path, img_name)
 
-                sql = "INSERT INTO images (category, subset, filename, full_path) VALUES (%s, %s, %s, %s)"
-                cursor.execute(sql, (cat, subset, img_name, full_path))
+                # 提取特征向量
+                try:
+                    feat = extractor.extract(full_path)  # numpy 1280-dim
+                    feat_bytes = feat.tobytes()          # → binary for BLOB
+                except Exception as e:
+                    print(f"  [WARN] 特征提取失败: {full_path} → {e}")
+                    feat_bytes = None
+                    errors += 1
+
+                sql = """INSERT INTO images (category, subset, filename, full_path, features)
+                         VALUES (%s, %s, %s, %s, %s)"""
+                cursor.execute(sql, (cat, subset, img_name, full_path, feat_bytes))
                 total += 1
 
+                if total % 200 == 0:
+                    print(f"  已处理: {total} 张...")
+
     conn.commit()
-    print(f"  共导入 {total} 条图片记录")
+    print(f"\n  共导入 {total} 条记录")
+    if errors:
+        print(f"  [WARN] {errors} 张图片特征提取失败")
 
     # 打印统计
     cursor.execute("""
@@ -167,6 +193,43 @@ def query_examples():
 
 
 # ============================================================
+# 4. 从数据库加载特征（代替文本文件方式）
+# ============================================================
+def load_features_from_db(limit=None):
+    """
+    从 MySQL 加载图片路径和特征向量。
+
+    参数:
+        limit: 限制加载条数（None=全部）
+    返回:
+        (paths_list, features_matrix)
+            paths:   ['cat/subset/fname', ...]
+            features: np.ndarray shape (N, 1280)
+    """
+    conn = pymysql.connect(**config)
+    cursor = conn.cursor()
+
+    sql = "SELECT category, subset, filename, features FROM images WHERE features IS NOT NULL"
+    if limit:
+        sql += f" LIMIT {limit}"
+    cursor.execute(sql)
+
+    paths = []
+    feats = []
+    for row in cursor.fetchall():
+        rel_path = f"{row['category']}/{row['subset']}/{row['filename']}"
+        feat = np.frombuffer(row['features'], dtype=np.float64)
+        paths.append(rel_path)
+        feats.append(feat)
+
+    cursor.close()
+    conn.close()
+
+    print(f"  从数据库加载: {len(paths)} 条特征, 维度 {feats[0].shape[0]}")
+    return paths, np.array(feats)
+
+
+# ============================================================
 # 主流程
 # ============================================================
 def main():
@@ -194,6 +257,7 @@ def main():
 
     print(f"\n{'=' * 60}")
     print(f"导入完成！共 {total} 条记录")
+    print("提示: 加载特征用 load_features_from_db()")
     print("=" * 60)
 
 
