@@ -1,0 +1,64 @@
+<?xml version="1.0" ?>
+<annotation>
+<folder>img</folder>
+<filename>15.jpg</filename>
+<path>C:\Users\Student\Desktop\img\15.jpg</path>
+<source>
+    <database>Unknown</database>
+</source>
+<size>
+    <width>416</width>
+    <height>416</height>
+    <depth>3</depth>
+</size>
+
+<segmented>0</segmented>
+    <object>
+    <name>马</name>
+    <pose>Unspecified</pose>
+    <truncated>0</truncated>
+    <difficult>0</difficult>
+    <bndbox>
+        <xmin>290</xmin>
+        <ymin>72</ymin>
+        <xmax>406</xmax>
+        <ymax>348</ymax>
+    </bndbox>
+</object>
+    <object>
+    <name>马</name>
+    <pose>Unspecified</pose>
+    <truncated>0</truncated>
+    <difficult>0</difficult>
+    <bndbox>
+        <xmin>201</xmin>
+        <ymin>74</ymin>
+        <xmax>288</xmax>
+        <ymax>353</ymax>
+    </bndbox>
+</object>
+    <object>
+    <name>马</name>
+    <pose>Unspecified</pose>
+    <truncated>0</truncated>
+    <difficult>0</difficult>
+    <bndbox>
+        <xmin>91</xmin>
+        <ymin>57</ymin>
+        <xmax>199</xmax>
+        <ymax>364</ymax>
+    </bndbox>
+</object>
+    <object>
+    <name>马</name>
+    <pose>Unspecified</pose>
+    <truncated>0</truncated>
+    <difficult>0</difficult>
+    <bndbox>
+        <xmin>1</xmin>
+        <ymin>77</ymin>
+        <xmax>90</xmax>
+        <ymax>359</ymax>
+    </bndbox>
+</object>
+</annotation>

@@ -1,0 +1,40 @@
+<?xml version="1.0" ?>
+<annotation>
+<folder>img</folder>
+<filename>10.jpg</filename>
+<path>C:\Users\Student\Desktop\img\10.jpg</path>
+<source>
+    <database>Unknown</database>
+</source>
+<size>
+    <width>416</width>
+    <height>416</height>
+    <depth>3</depth>
+</size>
+
+<segmented>0</segmented>
+    <object>
+    <name>马</name>
+    <pose>Unspecified</pose>
+    <truncated>0</truncated>
+    <difficult>0</difficult>
+    <bndbox>
+        <xmin>166</xmin>
+        <ymin>155</ymin>
+        <xmax>392</xmax>
+        <ymax>262</ymax>
+    </bndbox>
+</object>
+    <object>
+    <name>狗</name>
+    <pose>Unspecified</pose>
+    <truncated>0</truncated>
+    <difficult>0</difficult>
+    <bndbox>
+        <xmin>72</xmin>
+        <ymin>215</ymin>
+        <xmax>195</xmax>
+        <ymax>263</ymax>
+    </bndbox>
+</object>
+</annotation>
