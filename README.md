@@ -1,7 +1,7 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.07.10（8 周）  
+> **周期：** 2026.05.20 — 2026.07.17（9 周）  
 > **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测
 
 ---
@@ -17,8 +17,7 @@
 | **Week 5** | 06.15 - 06.18 | 深度学习入门          | 神经网络基础、前向传播、损失函数、PyTorch 张量运算、模型保存与加载          |
 | **Week 6** | 06.22 - 06.25 | 深度学习入门与小测验      | Pandas 深入、KNN 算法、MySQL 数据库、PyTorch 神经网络、深度学习理论 |
 | **Week 7** | 06.29 - 07.03 | 深度学习进阶 - 卷积神经网络 | CNN 原理、卷积/池化、图像分类实战、PyTorch 模型训练调优             |
-| **Week 8** | 07.06 - 07.10 | 经典 CNN 架构与实战    | VGG、ResNet、空洞卷积、CIFAR-10 训练、Oxford Pet 二分类、小黄人目标检测（全连接 vs 全卷积对比） |
-
+| **Week 8** | 07.06 - 07.10 | 经典 CNN 架构与实战    | VGG、ResNet、空洞卷积、CIFAR-10 训练、Oxford Pet 二分类、小黄人目标检测（全连接 vs 全卷积对比） || **Week 9** | 07.13 - 07.17 | YOLOv3 目标检测 | Darknet-53 骨干、FPN 特征金字塔、YOLOv3 三部分损失函数、解码与 NMS、完整训练循环、little_data 检测实战 |
 ---
 
 ## 📂 项目结构
@@ -101,6 +100,21 @@ step1/
 │   ├── minion_detector_best.pth — 小黄人检测最佳模型权重
 │   ├── VisA/                   — VisA 工业异常检测数据集（12 类）
 │   └── visa_search/            — 基于内容的图像检索系统（Flask + PyTorch）
+│
+├── week9/          # YOLOv3 目标检测
+│   ├── 0713.ipynb               — YOLOv3 概述：骨干网络 Darknet-53、FPN、锚框、损失函数
+│   ├── 0715.ipynb               — YOLOv3 详解：训练与预测流程、数据集标注格式
+│   ├── 0716.ipynb               — 损失函数详解：坐标损失 + 置信度损失 + 分类损失
+│   ├── 0717.ipynb               — 完整实现：网络结构 + Train 类 + NMS 详解 + little_data 训练 + 推理可视化
+│   ├── net.py                   — YOLOv3 练习框架（含 TODO 注释）
+│   ├── net_full.py              — YOLOv3 完整实现（Darknet53 → YOLOHead → 解码 → NMS → 检测）
+│   ├── yolov3.weights           — Darknet 预训练权重（需下载，已 .gitignore）
+│   ├── little_data/             — 小样本训练数据集（18 张图片，4 类：人/猫/狗/马）
+│   │   ├── images/              — 图片文件（01.jpg ~ 18.jpg）
+│   │   ├── Parse_label.txt      — YOLO 格式标签（像素坐标）
+│   │   ├── outputs_voc/         — PascalVOC 格式 XML 标注
+│   │   └── 图片缩放.py / 标签绘制测试.py / Parse_xml_pascalvoc.py — 数据处理脚本
+│   └── checkpoints_little/      — little_data 训练检查点（已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -248,6 +262,44 @@ step1/
 - **推理回原图**：网络输出归一化坐标 → 反归一化 → 原图画框，完整流程演示
 - **全卷积版网络 (FullyConvNet V2)** ⭐：保留 9×9 Grid 空间，每个 Grid Cell 独立预测 → 取最高置信度 Cell 解码，~3.4M 参数，更轻量、更符合检测器本质
 - **拓展对比**：全连接版（FC head）vs 全卷积版（Conv head），参数量、收敛速度对比
+
+---
+
+### Week 9 — YOLOv3 目标检测（07.13 - 07.17）
+
+#### 7月13日 — YOLOv3 概述与网络结构
+
+- **YOLO 系列发展**：YOLOv1（回归思想）→ YOLOv2（BatchNorm、高分辨率、Anchor）→ YOLOv3（多尺度+FPN）
+- **Darknet-53 骨干网络**：53 层卷积（含残差连接），无池化层（stride=2 降采样），相比 ResNet-152 速度更快、精度相当
+- **特征金字塔网络（FPN）**：3 个尺度输出（13×13、26×26、52×52），上采样 + 横向连接融合高低层语义
+- **Anchor 机制**：9 个锚框（大/中/小各 3 个），K-Means 聚类得到
+- **$S \times S$ 网格思想**：每格预测 3 个 anchor，每个 anchor 预测 $(5+C)$ 个值
+
+#### 7月15日 — YOLOv3 训练与预测流程
+
+- **标签编码（Training）**：归一化坐标 → 网格映射 → 计算 Anchor 偏移 → one-hot 类别 → 填充三个尺度的 label 张量
+- **解码（Inference）**：$\sigma(t_x)+c_x$、$\sigma(t_y)+c_y$、$p_w e^{t_w}$、$p_h e^{t_h}$ → 边界框坐标
+- **数据集标注格式**：`img_path cls cx cy w h` 归一化坐标
+- **`torch.where` + Mask 索引**：从海量 anchor 中筛选高置信度预测
+
+#### 7月16日 — YOLOv3 损失函数详解
+
+- **三部分损失**：$L = \lambda_{\text{coord}} L_{\text{coord}} + L_{\text{obj}} + L_{\text{cls}}$
+- **坐标损失**：MSE 回归 $(t_x,t_y,t_w,t_h)$，仅正样本参与，$\lambda_{\text{coord}}=5$ 强调定位
+- **置信度损失**：BCE 判断有无目标，负样本 $\lambda_{\text{noobj}}=0.5$ 降权（正负样本比 1:100+）
+- **分类损失**：BCE 而非 Softmax（多标签非互斥），每个类别独立二分类
+- **Sigmoid vs Softmax**：一个目标可同时属于"狗"和"动物"
+- **优化器对比**：SGD+Momentum（YOLOv3）vs Adam（讲义版），泛化性、稳定性分析
+
+#### 7月17日 — YOLOv3 完整实现
+
+- **网络结构**：`Darknet53` + `YOLOHead` + `YOLOv3`（FPN 组装）
+- **`Train` 类**：完整训练循环含三部分损失、梯度裁剪、MultiStepLR 调度、Checkpoint 保存/加载、训练曲线可视化
+- **`decode_scale`**：全向量化解码（3 尺度 × 每个 anchor 独立解码）
+- **`post_process` / `nms`**：非极大值抑制（按置信度排序 → 循环保留最高分框 → 删除 IoU > 0.45 同类框）
+- **`detect_image`**：预处理 → 推理 → 解码 → NMS → 坐标还原 → 原图画框
+- **little_data 实战**：18 张图片、4 类（人/猫/狗/马），训练 100 epoch → 推理可视化
+- **讲义代码对比**：`yolov3_detect`（讲义直观版）vs `Train + net_full`（工业高效版），逐行映射
 
 ---
 
