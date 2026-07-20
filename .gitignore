@@ -1,3 +1,32 @@
 env/
 __pycache__/
 *.pyc
+*.pyo
+
+# 模型权重文件（体积大，不纳入版本控制）
+*.pth
+*.pt
+
+# 训练输出结果（图片等）
+save_results/
+
+# Checkpoint 目录
+checkpoints_little/
+checkpoints/
+
+# PDF 文档
+*.pdf
+
+# Jupyter Notebook 检查点
+.ipynb_checkpoints/
+
+# 数据集目录
+datas/
+data/
+
+# IDE/编辑器
+.vscode/
+.idea/
+
+# 系统文件
+Thumbs.db
