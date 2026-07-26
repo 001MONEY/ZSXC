@@ -296,6 +296,23 @@ step1/
 - **解码（Inference）**：$\sigma(t_x)+c_x$、$\sigma(t_y)+c_y$、$p_w e^{t_w}$、$p_h e^{t_h}$ → 边界框坐标
 - **数据集标注格式**：`img_path cls cx cy w h` 归一化坐标
 
+#### 7月16日 — YOLOv3 损失函数详解
+
+- **三部分损失**：$L = \lambda_{\text{coord}} L_{\text{coord}} + L_{\text{obj}} + L_{\text{cls}}$
+- **坐标损失**：MSE 回归 $(t_x,t_y,t_w,t_h)$，仅正样本参与，$\lambda_{\text{coord}}=5$ 强调定位
+- **置信度损失**：BCE 判断有无目标，负样本 $\lambda_{\text{noobj}}=0.5$ 降权（正负样本比 1:100+）
+- **分类损失**：BCE 而非 Softmax（多标签非互斥），每个类别独立二分类
+- **Sigmoid vs Softmax**：一个目标可同时属于"狗"和"动物"
+
+#### 7月17日 — YOLOv3 完整实现
+
+- **网络结构**：`Darknet53` + `YOLOHead` + `YOLOv3`（FPN 组装）
+- **`Train` 类**：完整训练循环含三部分损失、梯度裁剪、MultiStepLR 调度、Checkpoint 保存/加载
+- **`decode_scale`**：全向量化解码（3 尺度 × 每个 anchor 独立解码）
+- **`post_process` / `nms`**：非极大值抑制（按置信度排序 → 循环保留最高分框 → 删除 IoU > 0.45 同类框）
+- **`detect_image`**：预处理 → 推理 → 解码 → NMS → 坐标还原 → 原图画框
+- **little_data 实战**：18 张图片、4 类（人/猫/狗/马），训练 100 epoch → 推理可视化
+
 ---
 
 ### Week 10 — 金鱼目标检测实战（07.20 - 07.26）
@@ -309,28 +326,6 @@ step1/
 **文件**：`train_yolo_xml.py`(训练)、`detect_mp4.py`(推理)、`参考代码/`(教学参考)、`yolov3_bug/`(原Bug版)
 
 **局限**：仅85张数据过拟合、13/26尺度检出少、需增加数据量和数据增强
-- **`torch.where` + Mask 索引**：从海量 anchor 中筛选高置信度预测
-
-#### 7月16日 — YOLOv3 损失函数详解
-
-- **三部分损失**：$L = \lambda_{\text{coord}} L_{\text{coord}} + L_{\text{obj}} + L_{\text{cls}}$
-- **坐标损失**：MSE 回归 $(t_x,t_y,t_w,t_h)$，仅正样本参与，$\lambda_{\text{coord}}=5$ 强调定位
-- **置信度损失**：BCE 判断有无目标，负样本 $\lambda_{\text{noobj}}=0.5$ 降权（正负样本比 1:100+）
-- **分类损失**：BCE 而非 Softmax（多标签非互斥），每个类别独立二分类
-- **Sigmoid vs Softmax**：一个目标可同时属于"狗"和"动物"
-- **优化器对比**：SGD+Momentum（YOLOv3）vs Adam（讲义版），泛化性、稳定性分析
-
-#### 7月17日 — YOLOv3 完整实现
-
-- **网络结构**：`Darknet53` + `YOLOHead` + `YOLOv3`（FPN 组装）
-- **`Train` 类**：完整训练循环含三部分损失、梯度裁剪、MultiStepLR 调度、Checkpoint 保存/加载、训练曲线可视化
-- **`decode_scale`**：全向量化解码（3 尺度 × 每个 anchor 独立解码）
-- **`post_process` / `nms`**：非极大值抑制（按置信度排序 → 循环保留最高分框 → 删除 IoU > 0.45 同类框）
-- **`detect_image`**：预处理 → 推理 → 解码 → NMS → 坐标还原 → 原图画框
-- **little_data 实战**：18 张图片、4 类（人/猫/狗/马），训练 100 epoch → 推理可视化
-- **讲义代码对比**：`yolov3_detect`（讲义直观版）vs `Train + net_full`（工业高效版），逐行映射
-
----
 
 ## 🧪 VisA 以图搜图项目
 
