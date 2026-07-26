@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.07.17（9 周）  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测
+> **周期：** 2026.05.20 — 2026.07.26（10 周）  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战
 
 ---
 
@@ -19,6 +19,7 @@
 | **Week 7** | 06.29 - 07.03 | 深度学习进阶 - 卷积神经网络 | CNN 原理、卷积/池化、图像分类实战、PyTorch 模型训练调优             |
 | **Week 8** | 07.06 - 07.10 | 经典 CNN 架构与实战 | VGG、ResNet、空洞卷积、CIFAR-10 训练、Oxford Pet 二分类、小黄人目标检测（全连接 vs 全卷积对比） |
 | **Week 9** | 07.13 - 07.17 | YOLOv3 目标检测 | Darknet-53 骨干、FPN 特征金字塔、YOLOv3 三部分损失函数、解码与 NMS、完整训练循环、little_data 检测实战 |
+| **Week 10** | 07.20 - 07.26 | 金鱼目标检测实战 | XML 标注解析、K-Means Anchor 聚类、YOLOv3 完整训练与推理、视频目标检测、损失函数对比优化 |
 ---
 
 ## 📂 项目结构
@@ -116,6 +117,19 @@ step1/
 │   │   ├── outputs_voc/         — PascalVOC 格式 XML 标注
 │   │   └── 图片缩放.py / 标签绘制测试.py / Parse_xml_pascalvoc.py — 数据处理脚本
 │   └── checkpoints_little/      — little_data 训练检查点（已 .gitignore）
+│
+├── week10/         # 金鱼目标检测实战
+│   ├── 0720.ipynb / 0724.ipynb  — 课程笔记
+│   ├── train_yolo_xml.py        — YOLOv3 训练（XML标注 + K-Means Anchor + Ignore区域 + BCE分类）
+│   ├── detect_mp4.py            — 视频推理（向量化解码 + torchvision NMS + sigmoid分类）
+│   ├── train.py / trainv2.py    — 参考训练脚本
+│   ├── checkpoints/             — 训练权重（yolov3_best.pth，已 .gitignore）
+│   ├── 图片文件/                — 85张训练图片（已 .gitignore）
+│   ├── 标注文件/                — 85个 Pascal VOC XML 标注（已 .gitignore）
+│   ├── 1.mp4                   — 测试视频（已 .gitignore）
+│   ├── output_detected.mp4      — 输出检测视频（已 .gitignore）
+│   ├── 参考代码/                — YOLOv3 教学参考实现（7个模块）
+│   └── yolov3_bug/             — 原始有Bug版本代码（已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -281,6 +295,20 @@ step1/
 - **标签编码（Training）**：归一化坐标 → 网格映射 → 计算 Anchor 偏移 → one-hot 类别 → 填充三个尺度的 label 张量
 - **解码（Inference）**：$\sigma(t_x)+c_x$、$\sigma(t_y)+c_y$、$p_w e^{t_w}$、$p_h e^{t_h}$ → 边界框坐标
 - **数据集标注格式**：`img_path cls cx cy w h` 归一化坐标
+
+---
+
+### Week 10 — 金鱼目标检测实战（07.20 - 07.26）
+
+基于 **YOLOv3** 对鱼缸视频中三种金鱼（红/黑/白）进行检测与分类，85 张图片训练，427 帧视频推理。
+
+**核心技术**：K-Means Anchor聚类、Ignore区域、BCE分类(训推一致)、Sigmoid on xy、向量化解码、torchvision NMS
+
+**损失函数演变**：v1(双mean,CE)→v2(正mean+负sum/n,CE)→v3(sum+Ignore,BCE+sigmoid(xy), 15:1权重)
+
+**文件**：`train_yolo_xml.py`(训练)、`detect_mp4.py`(推理)、`参考代码/`(教学参考)、`yolov3_bug/`(原Bug版)
+
+**局限**：仅85张数据过拟合、13/26尺度检出少、需增加数据量和数据增强
 - **`torch.where` + Mask 索引**：从海量 anchor 中筛选高置信度预测
 
 #### 7月16日 — YOLOv3 损失函数详解
