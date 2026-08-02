@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.07.26（10 周）  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战
+> **周期：** 2026.05.20 — 2026.08.02（11 周）  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测
 
 ---
 
@@ -20,6 +20,7 @@
 | **Week 8** | 07.06 - 07.10 | 经典 CNN 架构与实战 | VGG、ResNet、空洞卷积、CIFAR-10 训练、Oxford Pet 二分类、小黄人目标检测（全连接 vs 全卷积对比） |
 | **Week 9** | 07.13 - 07.17 | YOLOv3 目标检测 | Darknet-53 骨干、FPN 特征金字塔、YOLOv3 三部分损失函数、解码与 NMS、完整训练循环、little_data 检测实战 |
 | **Week 10** | 07.20 - 07.26 | 金鱼目标检测实战 | XML 标注解析、K-Means Anchor 聚类、YOLOv3 完整训练与推理、视频目标检测、损失函数对比优化 |
+| **Week 11** | 07.27 - 08.02 | YOLOv5 目标检测 | YOLOv5 架构（CSPDarknet53/C3/SPPF）、训练核心机制、PCB 六类缺陷实战训练、P/R/mAP 评估、detect.py 推理部署 |
 ---
 
 ## 📂 项目结构
@@ -130,6 +131,19 @@ step1/
 │   ├── output_detected.mp4      — 输出检测视频（已 .gitignore）
 │   ├── 参考代码/                — YOLOv3 教学参考实现（7个模块）
 │   └── yolov3_bug/             — 原始有Bug版本代码（已 .gitignore）
+│
+├── week11/         # YOLOv5 目标检测
+│   ├── 0727.ipynb               — Day1：项目结构与模型架构（CSPDarknet53、C3、SPPF）
+│   ├── 0728.ipynb / 0728.html   — Day2：训练核心机制（parse_model、损失、Mosaic、训练循环）
+│   ├── 0729.ipynb / 0729.html   — Day3：PCB 六类缺陷实战训练 + P/R/mAP 评估
+│   ├── 0731.ipynb / 0731.html   — Day4：detect.py 推理部署 + 评估指标详解
+│   ├── 20260728~31钱富森.pdf    — 逐日 PDF 笔记
+│   ├── yolov5-7.0/              — YOLOv5 源码框架（train/val/detect/export + models/utils/data）
+│   │   └── runs/                — 训练结果（exp4: best.pt、results.png、PR_curve.png 等）
+│   ├── PCBYOLODataset/          — PCB 缺陷数据集（YOLO 格式，images + labels + pcb.yaml）
+│   ├── PCB-VOC/                 — PCB VOC 标注 + 转换脚本（labelimg2yolo / read_xml / 切图）
+│   ├── datasets/                — 配套数据集（coco128 等）
+│   └── ultralytics-8.4.113/     — ultralytics 库（已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -326,6 +340,45 @@ step1/
 **文件**：`train_yolo_xml.py`(训练)、`detect_mp4.py`(推理)、`参考代码/`(教学参考)、`yolov3_bug/`(原Bug版)
 
 **局限**：仅85张数据过拟合、13/26尺度检出少、需增加数据量和数据增强
+
+---
+
+### Week 11 — YOLOv5 目标检测（07.27 - 08.02）
+
+基于 **YOLOv5** 对 PCB 电路板六类缺陷进行检测，完整走通「理论 → 源码 → 训练 → 评估 → 推理部署」全流程，最终达到 **mAP@0.5=92.1%、P=98.4%、83 FPS** 的工业可用水平。
+
+#### 7月27日 — 项目结构与模型架构
+
+- **项目结构**：顶层脚本（`detect.py` / `train.py` / `val.py` / `export.py`）+ `models/` + `utils/` + `data/`
+- **YOLOv5 vs YOLOv3 六大改进**：CSPDarknet53（计算量 -20%）、FPN+PAN 双向融合、SiLU 激活、3 anchor × 3 grid 正样本、CIoU 回归、Mosaic+MixUp+Multi-Scale 增强
+- **C3 模块**：双通道（深层提取 + 原始信息保留）拼接融合
+- **SPPF**：1 个 MaxPool 串行 3 次 → 感受野 5/9/13，比 SPP 快 2~3 倍
+- **n/s/m/l/x 五档模型**：改 `gd`（深度）/`gw`（宽度）两个系数即可切换
+
+#### 7月28日 — 训练核心机制
+
+- **`parse_model()`**：从 YAML 配置生成 `nn.Sequential` 模型
+- **三部分损失**：$L = \lambda_{box}\text{CIoU} + \lambda_{obj}\text{BCE} + \lambda_{cls}\text{BCE}$（权重 0.05 / 1.0 / 0.5）
+- **`build_targets` 正样本匹配**：每个 GT 匹配 3 anchor × 3 相邻 grid = 9 个正样本
+- **数据加载**：Mosaic（4 图拼接，变相 batch×4）、MixUp、HSV 增强、Rect 矩形训练（提速 30%）
+- **训练技巧**：Warmup、Multi-Scale（320~960）、梯度累积、AMP 混合精度、EMA、EarlyStopping
+
+#### 7月29日 — PCB 实战训练 + 评估
+
+- **数据集**：PCB 六类缺陷（`missing_hole` 缺孔 / `mouse_bite` 缺口 / `open_circuit` 断路 / `short` 短路 / `spur` 毛刺 / `spurious_copper` 多余铜）
+- **配置**：YOLOv5s 预训练、640×640、batch=16、100 epochs（RTX 3060 约 3.1h）
+- **结果**：mAP@0.5=**92.1%**、mAP@0.5:0.95=**63.5%**、P=**98.4%**、R=**90.6%**
+- **六类表现**：open_circuit 95.9%、spur 94.1%、missing_hole 93.2%、short 92.5%、spurious_copper 88.9%、mouse_bite 88.2%
+- **评估产物**：`results.png` / `PR_curve.png` / `confusion_matrix.png` / `F1_curve.png` / `best.pt`
+- **推理速度**：~12ms/张（83 FPS），达实时检测水平
+
+#### 7月31日 — 推理部署（detect.py）
+
+- **流程**：`DetectMultiBackend` 加载模型 → `LoadImages` 数据加载 → 前向推理 + NMS → `scale_boxes` 缩放回原图 → 标注保存
+- **关键参数**：`--conf-thres`（置信度阈值，调高 → P↑ R↓）、`--iou-thres`（NMS 阈值）、`--save-txt`、`--device`
+- **评估指标总结**：IoU、TP/FP/FN、P（管误检）、R（管漏检）、AP（PR 曲线下面积）、mAP@0.5（宽松标准）vs mAP@0.5:0.95（严格标准）
+
+**学习主线**：`yaml 配置 → parse_model 建模型 → Mosaic 数据加载 → ComputeLoss 三损失 → train 训练（Warmup/AMP/EMA）→ val 评估（P/R/mAP）→ detect 推理部署`
 
 ## 🧪 VisA 以图搜图项目
 
