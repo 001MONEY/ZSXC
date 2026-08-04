@@ -1,0 +1,53 @@
+# Ultralytics 深度学习开发环境 (Docker)
+# 本文件位于仓库根目录 D:\project\step1
+# 用法: docker compose up -d --build   (首次构建并启动)
+#       docker compose exec ultralytics-dev bash  (进入容器)
+#       docker compose down      (停止并删除容器)
+#
+# 基础镜像: pytorch/pytorch:2.13.0-cuda12.6-cudnn9-runtime (已本地下载)
+#           构建逻辑见 Dockerfile (额外安装 ultralytics)
+# 工作区: week12 (构建上下文与挂载均指向 ./week12)
+# GPU 直通: 需 Docker Desktop 使用 WSL2 后端, 且 WSL2 支持 CUDA
+
+services:
+  ultralytics-dev:
+    build:
+      context: ./week12
+      dockerfile: ../Dockerfile
+    image: ultralytics-dev:latest
+    container_name: ultralytics-dev
+    working_dir: /workspace
+    hostname: ultralytics-dev
+    restart: unless-stopped
+
+    # 挂载 week12 工作区到容器 /workspace
+    volumes:
+      - ./week12:/workspace
+
+    # 端口映射: Jupyter(8888) / TensorBoard(6006)
+    ports:
+      - "8888:8888"
+      - "6006:6006"
+
+    # PyTorch DataLoader 多进程需要足够的共享内存
+    shm_size: 2g
+    ipc: host
+
+    # 保持容器常驻, 可随时 exec 进入
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+    # GPU 直通 (NVIDIA)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - PYTHONUNBUFFERED=1
