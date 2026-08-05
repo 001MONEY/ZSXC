@@ -1,6 +1,12 @@
 ultralytics-8.4.113/
 ultralytics-8.4.113.zip
-hymenoptera_data
-imagenette160
 hymenoptera_data.zip
 imagenette160.zip
+handbone
+arthrosis
+arthrosis-小关节分类数据.zip
+voc-手掌数据.zip
+# Bone Age Assessment：忽略数据集与生成产物，保留代码（*.py / README 等）
+Bone Age Assessment/datasets/
+Bone Age Assessment/output/
+Bone Age Assessment/__pycache__/
