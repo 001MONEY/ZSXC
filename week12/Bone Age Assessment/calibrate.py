@@ -17,7 +17,8 @@
 
 用法：
     python calibrate.py --limit-train 100 --limit-val 50   # 快速试跑
-    python calibrate.py                                    # 全量
+    python calibrate.py                                    # 全量（默认分类模型特征）
+    python calibrate.py --ordinal                          # 用全部 9 关节 ordinal 模型特征
     python calibrate.py --preprocess-only                  # 只预处理验证图
 """
 import argparse
@@ -37,6 +38,8 @@ VAL_LABEL_CSV = config.BAA_DIR / "data" / "rsna_val_labels.csv"
 TRAIN_GT = config.BAA_DIR / "data" / "rsna_gt.csv"
 FEAT_TRAIN = config.BAA_DIR / "data" / "features_train.csv"
 FEAT_VAL = config.BAA_DIR / "data" / "features_val.csv"
+FEAT_TRAIN_ORD = config.BAA_DIR / "data" / "features_train_ordinal.csv"
+FEAT_VAL_ORD = config.BAA_DIR / "data" / "features_val_ordinal.csv"
 
 RUS_13 = ["Radius", "Ulna", "MCP-1", "MCP-3", "MCP-5",
           "PIP-1", "PIP-3", "PIP-5", "MIP-3", "MIP-5",
@@ -212,6 +215,8 @@ def main():
     parser.add_argument("--limit-train", type=int, default=None)
     parser.add_argument("--limit-val", type=int, default=None)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--ordinal", action="store_true",
+                        help="用全部 9 关节 ordinal 模型提取特征（否则默认分类模型）")
     args = parser.parse_args()
 
     # 1. 生成验证集标签
@@ -241,10 +246,13 @@ def main():
     for r in csv.DictReader(open(VAL_LABEL_CSV, encoding="utf-8-sig")):
         sex_map[int(r["Image ID"])] = "male" if r["male"].upper() == "TRUE" else "female"
 
-    pipe = Pipeline()
+    pipe = Pipeline(ordinal_all=args.ordinal)
+    feat_train, feat_val = (FEAT_TRAIN_ORD, FEAT_VAL_ORD) if args.ordinal else (FEAT_TRAIN, FEAT_VAL)
+    tag = "ordinal" if args.ordinal else "分类"
+    print(f"[OK] 特征来源：{tag} 模型  -> {feat_train.name} / {feat_val.name}")
 
     # 2. 训练特征：881 张训练图（detection_pre 已预处理）
-    print("\n提取训练集特征（881 张）...")
+    print(f"\n提取训练集特征（{tag}，881 张）...")
     train_imgs = []
     for split in ("train", "val"):
         train_imgs += sorted((config.DETECTION_PRE / "images" / split).glob("*.png"))
@@ -252,18 +260,18 @@ def main():
                   if int(p.stem) in train_gt]
     if args.limit_train:
         train_imgs = train_imgs[:args.limit_train]
-    rows_tr = extract_features(pipe, train_imgs, train_gt, FEAT_TRAIN, "train", True)
+    rows_tr = extract_features(pipe, train_imgs, train_gt, feat_train, "train", True)
     _, X_tr, y_tr = to_matrix(rows_tr)
     print(f"训练特征矩阵: {X_tr.shape}")
 
     # 3. 测试特征：1425 张验证图
-    print("\n提取验证集特征（1425 张）...")
+    print(f"\n提取验证集特征（{tag}，1425 张）...")
     val_imgs = sorted(VAL_PRE.glob("*.png"))
     val_imgs = [p for p in sorted(val_imgs, key=lambda p: int(p.stem))
                 if int(p.stem) in val_labels]
     if args.limit_val:
         val_imgs = val_imgs[:args.limit_val]
-    rows_va = extract_features(pipe, val_imgs, val_labels, FEAT_VAL, "val", True)
+    rows_va = extract_features(pipe, val_imgs, val_labels, feat_val, "val", True)
     ids_va, X_va, y_va = to_matrix(rows_va)
     print(f"验证特征矩阵: {X_va.shape}")
 

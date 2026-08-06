@@ -20,3 +20,4 @@ Bone Age Assessment/rsna_tmp/
 *.crdownload
 /train.csv
 /rsna_tmp/
+/Bone Age Validation Set/

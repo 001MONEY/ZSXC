@@ -166,14 +166,16 @@ def main():
     parser = argparse.ArgumentParser(description="骨龄端到端流水线")
     parser.add_argument("--image", type=str, help="单张 X 光片路径")
     parser.add_argument("--sex", default="boy", choices=["boy", "girl"])
-    parser.add_argument("--ordinal-all", action="store_true", help="全部关节用序数模型")
+    parser.add_argument("--ordinal-all", action="store_true", help="全部关节用序数模型（已默认）")
+    parser.add_argument("--use-ce", action="store_true", help="改用普通分类模型（对比实验用）")
     parser.add_argument("--calibrated", action="store_true", help="用数据驱动校准模型（推荐）")
     parser.add_argument("--demo", action="store_true", help="验证集批量演示")
     parser.add_argument("--n", type=int, default=4, help="演示图片数")
     parser.add_argument("--save", type=str, help="单图结果保存路径")
     args = parser.parse_args()
 
-    pipe = Pipeline(ordinal_all=args.ordinal_all, calibrated=args.calibrated)
+    # 默认全部关节用 ordinal（等级 MAE 更低，且与校准模型特征一致）
+    pipe = Pipeline(ordinal_all=not args.use_ce, calibrated=args.calibrated)
 
     if args.image:
         res = pipe.predict(args.image, sex=args.sex)
