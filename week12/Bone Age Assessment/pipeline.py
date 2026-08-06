@@ -42,10 +42,19 @@ CONF_THRESH = 0.25
 
 # ---------------------------------------------------------------- 模型加载
 class Pipeline:
-    def __init__(self, det_weights=None, ordinal_all=False):
+    def __init__(self, det_weights=None, ordinal_all=False, calibrated=False):
         from ultralytics import YOLO
         det_weights = det_weights or (config.BAA_DIR / "runs" / "bone7_ft" / "weights" / "best.pt")
         self.detector = YOLO(str(det_weights))
+        self.calibrated = calibrated
+        self.calib = None
+        if calibrated:
+            import joblib
+            pkl = config.BAA_DIR / "models" / "bone_age_regressor.pkl"
+            if not pkl.exists():
+                raise FileNotFoundError(f"缺少校准模型: {pkl}（先运行 calibrate.py）")
+            self.calib = joblib.load(pkl)
+            print(f"[OK] 已加载数据驱动骨龄模型: {self.calib['name']} (测试MAE={self.calib['test_mae_months']:.1f}月)")
         self.clfs = {}
         self.grade_lists = {}
         self.ordinals = {}
@@ -103,7 +112,27 @@ class Pipeline:
         for rid, info in bones.items():
             grades[rid] = self._classify_crop(info["classifier"], img, info["box"])
 
-        result = scoring.summarize(grades, sex=sex, require_all=require_all)
+        if self.calibrated:
+            # 数据驱动校准：13 骨得分 → 骨龄(月)
+            import scoring as _sc
+            tables = _sc.load_tables()
+            feat = []
+            for bone in _sc.RUS_13:
+                g = grades.get(bone)
+                feat.append(_sc.grade_to_score(bone, g, tables) if g is not None else None)
+            X = self.calib["imputer"].transform([feat])[0].reshape(1, -1)
+            months = float(self.calib["model"].predict(X)[0])
+            result = {"sex": sex, "total_score": None, "bone_age_years": round(months / 12.0, 2),
+                      "bone_age_months": round(months, 1), "bone_age_range": (None, None),
+                      "detail": [{"bone": b, "grade": grades.get(b), "score": f}
+                                  for b, f in zip(_sc.RUS_13, feat)],
+                      "missing": [b for b in _sc.RUS_13 if b not in grades],
+                      "method": "calibrated"}
+        else:
+            result = scoring.summarize(grades, sex=sex, require_all=require_all)
+            result["method"] = "rus-chn"
+            if result["bone_age_years"] is not None:
+                result["bone_age_months"] = round(result["bone_age_years"] * 12.0, 1)
         result["image"] = str(image_path)
         result["n_bones"] = len(bones)
         result["detections"] = dets
@@ -123,10 +152,10 @@ class Pipeline:
             cv2.rectangle(out, (x1, y1), (x2, y2), c, 3)
             cv2.putText(out, f"{rid} g{info['grade']}", (x1, max(0, y1 - 8)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, c, 2)
-        txt = (f"Sex={result['sex']}  RUS={result['total_score']}  "
+        txt = (f"Sex={result['sex']}  Method={result.get('method','?')}  "
                f"BoneAge={result['bone_age_years']}y"
-               + (f"[{result['bone_age_range'][0]}-{result['bone_age_range'][1]}y]"
-                  if result.get('bone_age_range') else "")
+               + (f"({result['bone_age_months']}mo)" if result.get('bone_age_months') else "")
+               + (f"  RUS={result['total_score']}" if result.get('total_score') is not None else "")
                + f"  missing={len(result['missing'])}")
         cv2.putText(out, txt, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
         return out
@@ -138,12 +167,13 @@ def main():
     parser.add_argument("--image", type=str, help="单张 X 光片路径")
     parser.add_argument("--sex", default="boy", choices=["boy", "girl"])
     parser.add_argument("--ordinal-all", action="store_true", help="全部关节用序数模型")
+    parser.add_argument("--calibrated", action="store_true", help="用数据驱动校准模型（推荐）")
     parser.add_argument("--demo", action="store_true", help="验证集批量演示")
     parser.add_argument("--n", type=int, default=4, help="演示图片数")
     parser.add_argument("--save", type=str, help="单图结果保存路径")
     args = parser.parse_args()
 
-    pipe = Pipeline(ordinal_all=args.ordinal_all)
+    pipe = Pipeline(ordinal_all=args.ordinal_all, calibrated=args.calibrated)
 
     if args.image:
         res = pipe.predict(args.image, sex=args.sex)
