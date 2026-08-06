@@ -124,7 +124,10 @@ class Pipeline:
             cv2.putText(out, f"{rid} g{info['grade']}", (x1, max(0, y1 - 8)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, c, 2)
         txt = (f"Sex={result['sex']}  RUS={result['total_score']}  "
-               f"BoneAge={result['bone_age_years']}y  missing={len(result['missing'])}")
+               f"BoneAge={result['bone_age_years']}y"
+               + (f"[{result['bone_age_range'][0]}-{result['bone_age_range'][1]}y]"
+                  if result.get('bone_age_range') else "")
+               + f"  missing={len(result['missing'])}")
         cv2.putText(out, txt, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
         return out
 

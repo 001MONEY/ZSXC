@@ -26,6 +26,7 @@ import config
 
 TABLES_PATH = Path(__file__).resolve().parent / "rus_tables.json"
 CSV_PATH = Path(__file__).resolve().parent / "骨发育等级对照表.csv"
+BONE_AGE_CSV_PATH = Path(__file__).resolve().parent / "骨龄评分参考表_TW3_RUS系列.csv"
 
 # RUS 13 根骨头（顺序固定，用于参数解析/展示）
 RUS_13 = ["Radius", "Ulna", "MCP-1", "MCP-3", "MCP-5",
@@ -52,10 +53,37 @@ MAX_TOTAL = sum(PLACEHOLDER_MAX.values())   # 占位总分上限（官方为 100
 
 
 # ---------------------------------------------------------------- 数据加载
-def build_tables_from_csv(csv_path=None, age_placeholder=True):
+def parse_bone_age_csv(path=None):
+    """解析 TW3-RUS 总分→骨龄 对照表（范围式：总分范围 → 骨龄范围）。
+    返回 {'boys': [[s_lo,s_hi,age_lo,age_hi],...], 'girls': [...]}（按总分升序）"""
+    import csv as _csv
+    path = Path(path or BONE_AGE_CSV_PATH)
+    if not path.exists():
+        return None
+    bins = {"boys": [], "girls": []}
+    for row in _csv.reader(path.open(encoding="utf-8-sig")):
+        if len(row) < 4 or row[0].strip() == "序号":
+            continue
+        sex = row[1].strip()
+        if "男" in sex:
+            key = "boys"
+        elif "女" in sex:
+            key = "girls"
+        else:
+            continue
+        slo, shi = (float(v) for v in row[2].replace(" ", "").split("-"))
+        alo, ahi = (float(v) for v in row[3].replace(" ", "").split("-"))
+        bins[key].append([slo, shi, alo, ahi])
+    bins["boys"].sort(key=lambda b: b[0])
+    bins["girls"].sort(key=lambda b: b[0])
+    return bins
+
+
+def build_tables_from_csv(csv_path=None, use_age_csv=True):
     """从官方 RUS-CHN 对照表 CSV 构建计分表。
     csv 格式：第一行 骨发育等级,1,2,...,14；后续每行 骨头名,各等级得分（- 表示无此等级）。
-    返回 (tables, max_total)；骨龄表默认仍为占位（需另行提供 RUS总分→骨龄 对照表）。"""
+    骨龄表优先从 骨龄评分参考表_TW3_RUS系列.csv 解析；缺失时退回占位。
+    返回 (tables, max_total)。"""
     import csv as _csv
     csv_path = Path(csv_path or CSV_PATH)
     if not csv_path.exists():
@@ -88,14 +116,18 @@ def build_tables_from_csv(csv_path=None, age_placeholder=True):
 
     tables = {"_meta": {
         "source": "RUS-CHN 骨发育等级对照表（来自 骨发育等级对照表.csv）",
-        "max_total": max_total,
-        "bone_age_source": "PLACEHOLDER 占位，需提供 RUS总分→骨龄 官方对照表"},
-        "score_by_bone": score_by_bone}
-    if age_placeholder:
-        # 骨龄表仍为占位（生成与占位表一致的结构）
+        "max_total": max_total}, "score_by_bone": score_by_bone}
+    # 骨龄表：优先真实 TW3-RUS 对照表，否则占位
+    age_bins = parse_bone_age_csv() if use_age_csv else None
+    if age_bins:
+        tables["bone_age_boys"] = age_bins["boys"]
+        tables["bone_age_girls"] = age_bins["girls"]
+        tables["_meta"]["bone_age_source"] = "TW3-RUS 骨龄评分参考表（骨龄评分参考表_TW3_RUS系列.csv）"
+    else:
         placeholder = generate_placeholder_tables()
         tables["bone_age_boys"] = placeholder["bone_age_boys"]
         tables["bone_age_girls"] = placeholder["bone_age_girls"]
+        tables["_meta"]["bone_age_source"] = "PLACEHOLDER 占位（缺 骨龄评分参考表_TW3_RUS系列.csv）"
     return tables, max_total
 
 
@@ -114,10 +146,18 @@ def generate_placeholder_tables():
         score_by_bone[bone] = table
 
     def make_age_table(male):
-        # 占位：总分 0→0.5岁，1000→男17/女16岁，分段线性
-        end = 17.0 if male else 16.0
-        return [[0, 0.5], [200, 4.0], [400, 8.0], [600, 11.5],
-                [800, 14.0], [MAX_TOTAL, end]]
+        # 占位：范围式 [[s_lo,s_hi,age_lo,age_hi],...]（与 TW3-RUS 参考表同构）
+        if male:
+            return [[100, 150, 4.0, 5.0], [151, 200, 5.0, 6.0], [201, 250, 6.0, 7.0],
+                    [251, 300, 7.0, 8.0], [301, 350, 8.0, 9.0], [351, 400, 9.0, 10.0],
+                    [401, 450, 10.0, 11.0], [451, 500, 11.0, 12.0], [501, 550, 12.0, 13.0],
+                    [551, 600, 13.0, 14.0], [601, 650, 14.0, 15.0], [651, 700, 15.0, 16.0],
+                    [701, 750, 16.0, 17.0], [751, 800, 17.0, 18.0]]
+        return [[100, 150, 3.0, 4.0], [151, 200, 4.0, 5.0], [201, 250, 5.0, 6.0],
+                [251, 300, 6.0, 7.0], [301, 350, 7.0, 8.0], [351, 400, 8.0, 9.0],
+                [401, 450, 9.0, 10.0], [451, 500, 10.0, 11.0], [501, 550, 11.0, 12.0],
+                [551, 600, 12.0, 13.0], [601, 650, 13.0, 14.0], [651, 700, 14.0, 15.0],
+                [701, 750, 15.0, 16.0]]
 
     return {
         "_meta": {"source": "PLACEHOLDER 占位演示数据，非官方RUS-CHN/TW3，医学使用前必须替换",
@@ -181,29 +221,29 @@ def compute_rus_score(grade_dict, tables, sex="boy", require_all=True):
 
 
 def bone_age_from_rus(total, sex, tables):
-    """RUS 总分 → 骨龄（年）。在对照表上线性插值，超出范围钳制到两端。"""
+    """RUS 总分 → 骨龄。参考表为范围式 bin [[s_lo,s_hi,age_lo,age_hi],...]。
+    返回 (骨龄中值, 下限, 上限)；低于/高于表范围时钳制到首/末档。"""
     key = "bone_age_boys" if sex == "boy" else "bone_age_girls"
-    table = tables[key]
-    if total is None:
-        return None
-    pts = sorted(table, key=lambda p: p[0])
-    if total <= pts[0][0]:
-        return pts[0][1]
-    if total >= pts[-1][0]:
-        return pts[-1][1]
-    for (s0, a0), (s1, a1) in zip(pts, pts[1:]):
-        if s0 <= total <= s1:
-            t = (total - s0) / (s1 - s0) if s1 > s0 else 0
-            return round(a0 + t * (a1 - a0), 2)
-    return pts[-1][1]
+    bins = tables[key]
+    if total is None or not bins:
+        return None, None, None
+    for lo, hi, alo, ahi in bins:
+        if lo <= total <= hi:
+            return (alo + ahi) / 2, alo, ahi
+    if total < bins[0][0]:          # 低于表最低档 → 用首档
+        _, _, alo, ahi = bins[0]
+        return (alo + ahi) / 2, alo, ahi
+    _, _, alo, ahi = bins[-1]       # 高于表最高档 → 用末档
+    return (alo + ahi) / 2, alo, ahi
 
 
 def summarize(grade_dict, sex="boy", require_all=True, tables=None):
     """一步汇总：等级 → 总分 → 骨龄。返回 dict 结果。"""
     tables = tables or load_tables()
     total, detail, missing = compute_rus_score(grade_dict, tables, sex, require_all)
-    age = bone_age_from_rus(total, sex, tables) if total is not None else None
-    return {"sex": sex, "total_score": total, "bone_age_years": age,
+    age_mid, age_lo, age_hi = bone_age_from_rus(total, sex, tables)
+    return {"sex": sex, "total_score": total, "bone_age_years": age_mid,
+            "bone_age_range": (age_lo, age_hi),
             "detail": detail, "missing": missing}
 
 
@@ -223,11 +263,12 @@ def demo(grades_args=None):
 
     for sex in ("boy", "girl"):
         res = summarize(grade_dict, sex=sex, tables=tables)
+        lo, hi = res["bone_age_range"]
         print(f"\n--- {sex} ---")
-        print(f"  总分: {res['total_score']}  骨龄: {res['bone_age_years']} 岁")
+        print(f"  总分: {res['total_score']}  骨龄: {res['bone_age_years']} 岁（范围 {lo}-{hi} 岁）")
         if res["missing"]:
             print(f"  缺失: {res['missing']}")
-    print("\n[OK] 演示完成（占位数据，仅供流程验证）")
+    print(f"\n[OK] 演示完成（数据来源: {tables['_meta'].get('bone_age_source', tables['_meta']['source'])}）")
 
 
 if __name__ == "__main__":
