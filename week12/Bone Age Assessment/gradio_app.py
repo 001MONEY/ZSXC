@@ -21,8 +21,9 @@ PIPE = Pipeline(ordinal_all=True, calibrated=True)
 
 
 def run_pipeline(image_path, sex):
-    """上传图 -> 标注图(RGB), 明细表, 骨龄, 检出信息"""
-    res = PIPE.predict(image_path, sex=sex)
+    """上传图 -> 标注图(RGB), 明细表, 骨龄, 检出信息
+    do_preprocess=True: 用户上传的是原始 X 光片，自动 CLAHE 预处理（模型在预处理图上训练）"""
+    res = PIPE.predict(image_path, sex=sex, do_preprocess=True)
 
     # 可视化标注图（BGR -> RGB）
     vis = PIPE.visualize(res)

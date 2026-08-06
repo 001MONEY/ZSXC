@@ -96,13 +96,24 @@ class Pipeline:
                 return int(predict_grade(out, gl).item())
             return int(gl[out.argmax(1).item()])
 
-    def predict(self, image_path, sex="boy", require_all=False):
-        """完整流水线：输入 X 光片路径 → 结果 dict"""
+    def predict(self, image_path, sex="boy", require_all=False, do_preprocess=False):
+        """完整流水线：输入 X 光片路径 → 结果 dict
+
+        do_preprocess: 对原始 X 光片自动做 CLAHE 预处理（灰度+中值滤波+CLAHE），
+        与训练数据一致。用户上传原始片时应设为 True（模型在预处理图上训练）。
+        注意：已预处理过的图（detection_pre / rsna_val_pre）不要重复处理，保持 False。
+        """
         img = cv2.imread(str(image_path))
         if img is None:
             raise FileNotFoundError(f"无法读取图片: {image_path}")
+        if do_preprocess:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            gray = cv2.medianBlur(gray, 3)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            eq = clahe.apply(gray)
+            img = cv2.cvtColor(eq, cv2.COLOR_GRAY2BGR)
 
-        r = self.detector.predict(str(image_path), conf=CONF_THRESH,
+        r = self.detector.predict(img, conf=CONF_THRESH,
                                   imgsz=640, verbose=False)[0]
         dets = [(self.detector.names[int(b.cls)], float(b.conf), b.xyxy[0].tolist())
                 for b in r.boxes]
