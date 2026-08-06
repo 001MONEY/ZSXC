@@ -180,6 +180,7 @@ def main():
     parser.add_argument("--ordinal-all", action="store_true", help="全部关节用序数模型（已默认）")
     parser.add_argument("--use-ce", action="store_true", help="改用普通分类模型（对比实验用）")
     parser.add_argument("--calibrated", action="store_true", help="用数据驱动校准模型（推荐）")
+    parser.add_argument("--do-preprocess", action="store_true", help="输入为原始X光片时自动CLAHE预处理")
     parser.add_argument("--demo", action="store_true", help="验证集批量演示")
     parser.add_argument("--n", type=int, default=4, help="演示图片数")
     parser.add_argument("--save", type=str, help="单图结果保存路径")
@@ -189,7 +190,7 @@ def main():
     pipe = Pipeline(ordinal_all=not args.use_ce, calibrated=args.calibrated)
 
     if args.image:
-        res = pipe.predict(args.image, sex=args.sex)
+        res = pipe.predict(args.image, sex=args.sex, do_preprocess=args.do_preprocess)
         print(f"图片: {res['image']}")
         print(f"检出骨头: {res['n_bones']}/13  缺失: {res['missing']}")
         print("13 骨等级:")
