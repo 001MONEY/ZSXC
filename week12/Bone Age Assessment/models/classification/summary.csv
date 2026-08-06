@@ -1,0 +1,10 @@
+﻿joint,num_classes,train,val,best_acc,best_epoch,model
+DIP,11,1009,253,0.6719,33,resnet18
+DIPFirst,11,505,127,0.6378,22,resnet18
+MCP,10,1009,253,0.5534,10,resnet18
+MCPFirst,11,506,127,0.7874,20,resnet18
+MIP,12,1009,253,0.7431,35,resnet18
+PIP,12,1009,253,0.6561,26,resnet18
+PIPFirst,12,506,126,0.7778,34,resnet18
+Radius,14,507,126,0.619,22,resnet18
+Ulna,12,506,126,0.4841,25,resnet18

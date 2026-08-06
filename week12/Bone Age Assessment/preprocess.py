@@ -33,14 +33,15 @@ from tqdm import tqdm
 
 import config
 
+
 # ---------------- 预处理参数（可自行调整） ----------------
 GRAY_WEIGHTS = (0.299, 0.587, 0.114)   # 加权平均法灰度化权重
 MEDIAN_KSIZE = 3                       # 中值滤波核大小（奇数）
 CLAHE_CLIP = 2.0                       # CLAHE 对比度限制（越大对比度越强）
 CLAHE_GRID = (8, 8)                    # CLAHE 分块网格
 
-DETECTION_PRE = config.DATASETS / "detection_pre"
-CLASSIFICATION_PRE = config.DATASETS / "classification_pre"
+DETECTION_PRE = config.DETECTION_PRE      # 预处理版检测数据集
+CLASSIFICATION_PRE = config.CLASSIFICATION_PRE  # 预处理版分类数据集
 PREVIEW_DIR = config.BAA_DIR / "output" / "preview"
 
 
@@ -97,7 +98,7 @@ def process_detection():
     ]
     content += [f"  {i}: {name}" for i, name in enumerate(config.DET_CLASSES)]
     (dst / "data.yaml").write_text("\n".join(content) + "\n", encoding="utf-8")
-    print(f"[✓] 检测预处理完成 -> {dst}")
+    print(f"[OK] 检测预处理完成 -> {dst}")
 
 
 # ---------------------------------------------------------------- 分类数据
@@ -134,7 +135,7 @@ def process_classification():
             p = src / joint / name
             if p.exists():
                 shutil.copy2(p, dst / joint / name)
-    print(f"[✓] 分类预处理完成: {len(tasks)} 张 -> {dst}")
+    print(f"[OK] 分类预处理完成: {len(tasks)} 张 -> {dst}")
 
 
 # ---------------------------------------------------------------- 预览对比
@@ -161,7 +162,7 @@ def preview(n: int = 6):
         combo = np.hstack([img, proc])
         out = PREVIEW_DIR / f"preview_{i:02d}_{f.stem}.png"
         cv2.imwrite(str(out), combo)
-        print(f"[✓] {out}")
+        print(f"[OK] {out}")
     print(f"共生成 {len(imgs)} 张对比图 -> {PREVIEW_DIR}")
 
 
@@ -188,7 +189,7 @@ def main():
         process_detection()
     if do_cls:
         process_classification()
-    print("\n[✓] 全部完成！")
+    print("\n[OK] 全部完成！")
 
 
 if __name__ == "__main__":

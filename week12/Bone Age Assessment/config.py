@@ -18,6 +18,10 @@ ARTHROSIS = WORKSPACE / "arthrosis"                 # 分类数据（关节类�
 DETECTION_DIR = DATASETS / "detection"              # YOLO 格式检测数据集
 CLASSIFICATION_DIR = DATASETS / "classification"    # ImageFolder 格式分类数据集
 
+# 预处理版数据集（preprocess.py 生成，训练推荐使用）
+DETECTION_PRE = DATASETS / "detection_pre"           # 预处理版检测数据集
+CLASSIFICATION_PRE = DATASETS / "classification_pre" # 预处理版分类数据集
+
 # ---------------- 检测模型 7 类（对应 VOC XML 中的 <name>）----------------
 DET_CLASSES = [
     "Radius",            # 桡骨

@@ -155,7 +155,7 @@ def write_data_yaml(dst_dir):
     for i, name in enumerate(config.DET_CLASSES):
         content.append(f"  {i}: {name}")
     (dst_dir / "data.yaml").write_text("\n".join(content) + "\n", encoding="utf-8")
-    print(f"[✓] 已生成 data.yaml -> {dst_dir / 'data.yaml'}")
+    print(f"[OK] 已生成 data.yaml -> {dst_dir / 'data.yaml'}")
 
 
 def count_classes(samples):
@@ -217,7 +217,7 @@ def main():
         "train_ratio": config.TRAIN_RATIO,
     }
     (dst / "stats.json").write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\n[✓] 完成！统计已保存 -> {dst / 'stats.json'}")
+    print(f"\n[OK] 完成！统计已保存 -> {dst / 'stats.json'}")
 
 
 if __name__ == "__main__":

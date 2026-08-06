@@ -45,28 +45,33 @@ def collect_images(joint: str):
     return items
 
 
-def split_items(items, ratio, seed):
+def split_items(items, ratio, seed, min_val=4):
     """
-    按等级分层划分 train/val：每级至少 1 张进 val、1 张进 train。
-    返回 (train_items, val_items)，元素为 (grade, img_path)。
+    按等级分层划分 train/val：
+    - 每等级至少 min_val 张进 val（当样本数足够时），至少 1 张进 train
+    - 返回 (train_items, val_items, detail)，detail 为 [(grade, n_val, n_total), ...]
     """
     random.seed(seed)
     by_grade = defaultdict(list)
     for grade, img in items:
         by_grade[grade].append(img)
 
-    train, val = [], []
+    train, val, detail = [], [], []
     for grade in sorted(by_grade):
         imgs = by_grade[grade]
         random.shuffle(imgs)
-        if len(imgs) == 1:
-            print(f"[警告] {grade} 级只有 1 张图，全部放入 train")
+        n = len(imgs)
+        if n <= 1:
             train.extend((grade, p) for p in imgs)
+            detail.append((grade, 0, n))
+            print(f"[警告] {grade} 级只有 {n} 张图，全部放入 train")
             continue
-        n_val = max(1, min(len(imgs) - 1, round(len(imgs) * (1 - ratio))))
+        # val 取 max(min_val, 20%)，但不超过 n-1（保证 train 至少 1 张）
+        n_val = min(n - 1, max(min_val, round(n * (1 - ratio))))
         val.extend((grade, p) for p in imgs[:n_val])
         train.extend((grade, p) for p in imgs[n_val:])
-    return train, val
+        detail.append((grade, n_val, n))
+    return train, val, detail
 
 
 def write_items(items, split_name, dst_joint: Path):
@@ -89,13 +94,18 @@ def process_joint(joint: str, dry_run: bool):
     grades = sorted({g for g, _ in items})
     print(f"  等级数: {len(grades)} ({grades[0]} ~ {grades[-1]})   图片总数: {len(items)}")
 
-    train, val = split_items(items, config.TRAIN_RATIO, config.SEED)
+    train, val, detail = split_items(items, config.TRAIN_RATIO, config.SEED)
     by_grade_tr = defaultdict(int)
     by_grade_va = defaultdict(int)
     for g, _ in train:
         by_grade_tr[g] += 1
     for g, _ in val:
         by_grade_va[g] += 1
+
+    # 打印每等级划分明细（便于审计）
+    print("  等级  train  val  合计")
+    for g, n_val, n_total in detail:
+        print(f"    {g:>3}  {by_grade_tr[g]:>5}  {n_val:>4}  {n_total:>4}")
 
     if dry_run:
         return {"joint": joint, "grades": grades, "train": dict(by_grade_tr), "val": dict(by_grade_va)}
@@ -136,7 +146,7 @@ def main():
         print("汇总：")
         for r in summary:
             print(f"  {r['joint']:<10} 等级 {len(r['grades']):>2} 个  train {sum(r['train'].values()):>4}  val {sum(r['val'].values()):>4}")
-    print("\n[✓] 完成！")
+    print("\n[OK] 完成！")
 
 
 if __name__ == "__main__":

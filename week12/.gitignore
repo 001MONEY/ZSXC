@@ -9,4 +9,5 @@ voc-手掌数据.zip
 # Bone Age Assessment：忽略数据集与生成产物，保留代码（*.py / README 等）
 Bone Age Assessment/datasets/
 Bone Age Assessment/output/
+Bone Age Assessment/runs/
 Bone Age Assessment/__pycache__/
