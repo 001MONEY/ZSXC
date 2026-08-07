@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1100</width>
+    <height>720</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>骨龄评估系统</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <item>
+     <widget class="QLabel" name="titleLabel">
+      <property name="text">
+       <string>骨龄评估系统</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">font-size:20pt; font-weight:bold; color:#1565c0;</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="mainLayout">
+      <item>
+       <layout class="QVBoxLayout" name="leftLayout">
+        <item>
+         <widget class="QPushButton" name="btnSelect">
+          <property name="text">
+           <string>选择图片...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="sexLayout">
+          <item>
+           <widget class="QLabel" name="labelSex">
+            <property name="text">
+             <string>性别:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="sexCombo">
+            <item>
+             <property name="text">
+              <string>boy</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>girl</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnRun">
+          <property name="text">
+           <string>评估骨龄</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="imgInput">
+          <property name="minimumSize">
+           <size>
+            <width>360</width>
+            <height>420</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>未选择图片</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">border:1px solid #ccc; background:#fafafa;</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="rightLayout">
+        <item>
+         <widget class="QLabel" name="labelOutTitle">
+          <property name="text">
+           <string>检测结果</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="imgOutput">
+          <property name="minimumSize">
+           <size>
+            <width>360</width>
+            <height>280</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>等待评估...</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">border:1px solid #ccc; background:#fafafa;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelAge">
+          <property name="text">
+           <string>骨龄: --</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">font-size:16pt; color:#d32f2f; font-weight:bold;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelInfo">
+          <property name="text">
+           <string>检出信息: --</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="tableDetail">
+          <property name="columnCount">
+           <number>3</number>
+          </property>
+          <column>
+           <property name="text">
+            <string>骨头</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>等级</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>RUS得分</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
