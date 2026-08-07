@@ -15,6 +15,21 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_2">
+    <property name="spacing">
+     <number>14</number>
+    </property>
+    <property name="leftMargin">
+     <number>16</number>
+    </property>
+    <property name="topMargin">
+     <number>16</number>
+    </property>
+    <property name="rightMargin">
+     <number>16</number>
+    </property>
+    <property name="bottomMargin">
+     <number>16</number>
+    </property>
     <item>
      <widget class="QLabel" name="titleLabel">
       <property name="text">
@@ -30,8 +45,14 @@
     </item>
     <item>
      <layout class="QHBoxLayout" name="mainLayout">
+      <property name="spacing">
+       <number>18</number>
+      </property>
       <item>
        <layout class="QVBoxLayout" name="leftLayout">
+        <property name="spacing">
+         <number>10</number>
+        </property>
         <item>
          <widget class="QPushButton" name="btnSelect">
           <property name="text">
@@ -107,6 +128,9 @@
       </item>
       <item>
        <layout class="QVBoxLayout" name="rightLayout">
+        <property name="spacing">
+         <number>10</number>
+        </property>
         <item>
          <widget class="QLabel" name="labelOutTitle">
           <property name="text">
@@ -152,6 +176,12 @@
         </item>
         <item>
          <widget class="QTableWidget" name="tableDetail">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>220</height>
+           </size>
+          </property>
           <property name="columnCount">
            <number>3</number>
           </property>

@@ -18,11 +18,142 @@ static const char *kServerUrl = "http://127.0.0.1:8765/predict";
 static const QString kPython = "D:/project/step1/env/python.exe";
 static const QString kServerScript = "D:/project/step1/week12/Bone Age Assessment/qt_server.py";
 
+// 全局样式表（现代化浅色主题）
+static const char *kGlobalQss = R"(
+QMainWindow {
+    background-color: #f2f5f9;
+}
+QLabel#titleLabel {
+    font-size: 22pt;
+    font-weight: bold;
+    color: #1565c0;
+    padding: 6px 0 10px 0;
+}
+QPushButton#btnSelect {
+    background-color: #ffffff;
+    border: 1px solid #b0bec5;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 11pt;
+    color: #37474f;
+}
+QPushButton#btnSelect:hover {
+    background-color: #e3f2fd;
+    border-color: #42a5f5;
+}
+QPushButton#btnSelect:pressed {
+    background-color: #bbdefb;
+}
+QPushButton#btnRun {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #42a5f5, stop:1 #1e88e5);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 16px;
+    font-size: 12pt;
+    font-weight: bold;
+}
+QPushButton#btnRun:hover {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #64b5f6, stop:1 #42a5f5);
+}
+QPushButton#btnRun:pressed {
+    background-color: #1976d2;
+}
+QPushButton#btnRun:disabled {
+    background-color: #b0bec5;
+    color: #eceff1;
+}
+QLabel#imgInput, QLabel#imgOutput {
+    background-color: #ffffff;
+    border: 1px solid #cfd8dc;
+    border-radius: 10px;
+    color: #90a4ae;
+}
+QLabel#labelOutTitle {
+    font-size: 13pt;
+    font-weight: bold;
+    color: #455a64;
+}
+QLabel#labelAge {
+    font-size: 18pt;
+    color: #d32f2f;
+    font-weight: bold;
+}
+QLabel#labelInfo {
+    font-size: 10.5pt;
+    color: #546e7a;
+}
+QLabel#labelSex {
+    font-size: 11pt;
+    color: #455a64;
+}
+QComboBox {
+    background-color: #ffffff;
+    border: 1px solid #b0bec5;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 11pt;
+    min-width: 90px;
+}
+QComboBox:hover { border-color: #42a5f5; }
+QComboBox::drop-down { border: none; width: 22px; }
+QComboBox QAbstractItemView {
+    background-color: #ffffff;
+    border: 1px solid #b0bec5;
+    selection-background-color: #e3f2fd;
+    selection-color: #1565c0;
+}
+QTableWidget {
+    background-color: #ffffff;
+    alternate-background-color: #f5f7fa;
+    border: 1px solid #cfd8dc;
+    border-radius: 8px;
+    gridline-color: #eceff1;
+    font-size: 10.5pt;
+    selection-background-color: #e3f2fd;
+    selection-color: #1565c0;
+}
+QTableWidget::item { padding: 6px; }
+QHeaderView::section {
+    background-color: #eceff1;
+    color: #37474f;
+    font-weight: bold;
+    font-size: 10.5pt;
+    padding: 8px;
+    border: none;
+    border-right: 1px solid #cfd8dc;
+    border-bottom: 1px solid #cfd8dc;
+}
+QScrollBar:vertical {
+    background: transparent; width: 10px; margin: 0;
+}
+QScrollBar::handle:vertical {
+    background: #b0bec5; border-radius: 5px; min-height: 24px;
+}
+QScrollBar::handle:vertical:hover { background: #90a4ae; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar:horizontal {
+    background: transparent; height: 10px; margin: 0;
+}
+QScrollBar::handle:horizontal {
+    background: #b0bec5; border-radius: 5px; min-width: 24px;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
+QStatusBar {
+    background-color: #e3f2fd;
+    color: #37474f;
+    border-top: 1px solid #cfd8dc;
+}
+)";
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    setStyleSheet(QString::fromLatin1(kGlobalQss));
 
     net_ = new QNetworkAccessManager(this);
     connect(net_, &QNetworkAccessManager::finished,
