@@ -6,6 +6,7 @@ handbone
 arthrosis
 arthrosis-小关节分类数据.zip
 voc-手掌数据.zip
+luosi-keypoint
 # Bone Age Assessment：忽略数据集与生成产物，保留代码（*.py / README 等）
 Bone Age Assessment/datasets/
 Bone Age Assessment/output/
