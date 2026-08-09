@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.08.02（11 周）  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测
+> **周期：** 2026.05.20 — 2026.08.09（12 周）  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测
 
 ---
 
@@ -21,6 +21,7 @@
 | **Week 9** | 07.13 - 07.17 | YOLOv3 目标检测 | Darknet-53 骨干、FPN 特征金字塔、YOLOv3 三部分损失函数、解码与 NMS、完整训练循环、little_data 检测实战 |
 | **Week 10** | 07.20 - 07.26 | 金鱼目标检测实战 | XML 标注解析、K-Means Anchor 聚类、YOLOv3 完整训练与推理、视频目标检测、损失函数对比优化 |
 | **Week 11** | 07.27 - 08.02 | YOLOv5 目标检测 | YOLOv5 架构（CSPDarknet53/C3/SPPF）、训练核心机制、PCB 六类缺陷实战训练、P/R/mAP 评估、detect.py 推理部署 |
+| **Week 12** | 08.03 - 08.09 | 骨龄评估系统 & YOLOv8-pose | 两阶段骨龄评估（7类骨检测+9关节分类+RUS计分/数据驱动校准）、RSNA 真实骨龄验证、YOLOv8-pose 解读与 luosi-keypoint 关键点训练 |
 ---
 
 ## 📂 项目结构
@@ -144,6 +145,17 @@ step1/
 │   ├── PCB-VOC/                 — PCB VOC 标注 + 转换脚本（labelimg2yolo / read_xml / 切图）
 │   ├── datasets/                — 配套数据集（coco128 等）
 │   └── ultralytics-8.4.113/     — ultralytics 库（已 .gitignore）
+│
+├── week12/         # 骨龄评估系统 + YOLOv8-pose 关键点检测
+│   ├── 0803.ipynb / 0805.ipynb / 0807.ipynb (+ .html) — 逐日课程笔记
+│   ├── 骨龄评估系统研发方案v2.md     — 两阶段骨龄评估方案文档
+│   ├── 蔬菜分类训练.md / qianyixuexi.py — 蔬菜分类 & 迁移学习
+│   ├── Bone Age Assessment/      — 骨龄评估代码（检测/分类/计分/校准/pipeline + Qt 界面）
+│   ├── handbone/                 — 手骨检测数据集（VOC 格式, 881张, 7类）
+│   ├── arthrosis/                — 9 关节等级分类数据集
+│   ├── rsna_tmp/                 — RSNA 骨龄挑战赛数据（真实骨龄标签）
+│   ├── luosi-keypoint/           — 螺丝 6 关键点数据集（LabelMe 标注, 已 .gitignore）
+│   └── ultralytics-8.4.113/      — ultralytics 源码（已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -379,6 +391,29 @@ step1/
 - **评估指标总结**：IoU、TP/FP/FN、P（管误检）、R（管漏检）、AP（PR 曲线下面积）、mAP@0.5（宽松标准）vs mAP@0.5:0.95（严格标准）
 
 **学习主线**：`yaml 配置 → parse_model 建模型 → Mosaic 数据加载 → ComputeLoss 三损失 → train 训练（Warmup/AMP/EMA）→ val 评估（P/R/mAP）→ detect 推理部署`
+
+### Week 12 — 骨龄评估系统 + YOLOv8-pose 关键点检测（08.03 - 08.09）
+
+#### 🦴 骨龄评估系统（两阶段方案）
+
+- **方案**：`7类骨检测(YOLOv8) → 9关节等级分类 → RUS计分/数据驱动校准 → 骨龄`
+- **检测**：`handbone/` 881 张手骨图（VOC→YOLO），bone7_ft 模型 **mAP50=0.991 / mAP50-95=0.599**，两段式迁移学习（先 freeze 主干再全量微调）
+- **分类**：`arthrosis/` 9 关节（DIP/PIP/MCP/MIP/Radius/Ulna…）等级 1-14，ResNet18 分类 + CORN 序数回归（解决 Ulna 弱区分度问题，等级 MAE 2.48→1.67）
+- **计分/校准**：13 根 RUS 骨得分特征 → GradientBoosting 回归骨龄，全量 1278 张训练 **MAE=12.83 月（1.07 岁）、相关 0.884**
+- **端到端**：`pipeline.py`（检测→`filter_bones.py` 过滤 13 骨→分类→计分→骨龄）+ `gradio_app.py` / `qt_server.py` 界面
+- **关键发现**：`arthrosis` 部分骨头等级标注与真实成熟度脱节（桡骨权重 210/1000 却是噪声）→ 用 RSNA 真实骨龄标签做**数据驱动校准**解决，端到端精度提升 4 倍
+
+#### 🔩 YOLOv8-pose 关键点检测（0807.ipynb）
+
+- **架构解读**：逐层分析 `yolov8-pose.yaml` —— Backbone（C2f/SPPF）+ Neck（FPN+PAN）+ Pose 头（框 cv2 / 类 cv3 / 关键点 cv4），关键点解码公式 $(2p + a - 0.5)\times s$
+- **实战训练** `luosi-keypoint`：螺丝 6 顶点关键点检测，639 张（LabelMe→YOLO-pose），`yolov8n-pose` 迁移学习（kpt_shape 17→6 自动重建 Pose 头），100 epochs 仅 8.6 分钟
+- **结果**：**box mAP50=0.995 / mAP50-95=0.897，pose mAP50=0.823 / mAP50-95=0.657**，单张推理 2.8ms
+
+#### 🥦 其他
+
+- 蔬菜分类训练（迁移学习实战）与 `qianyixuexi.py` 迁移学习脚本
+
+---
 
 ## 🧪 VisA 以图搜图项目
 
