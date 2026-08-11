@@ -1,0 +1,21 @@
+# 动作识别数据集（图片）
+action_train/
+
+# 关键点检测输出结果（生成产物）
+action_train_pose_out/
+
+# 特征文件（生成产物）
+feats.txt
+
+# 脑肿瘤数据集（只忽略图片 + 标注，保留 *.py 转换脚本）
+Br35HDet/Br35HDet/
+
+# 脑肿瘤流水线生成数据（转 YOLO 格式中间产物 + train/val 划分结果）
+Br35HDet/yolo_all/
+Br35HDet/yolodataset/
+
+# ultralytics 训练输出
+runs/
+
+# 肿瘤抠图输出（生成产物）
+tumor_crop_out/
