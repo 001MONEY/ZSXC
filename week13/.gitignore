@@ -19,3 +19,11 @@ runs/
 
 # 肿瘤抠图输出（生成产物）
 tumor_crop_out/
+
+car.mp4
+car2.mp4
+onnx_models
+
+# YOLO 推理输出图片（生成产物）
+img.jpg
+v8_out.jpg
