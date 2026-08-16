@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.08.09（12 周）  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测
+> **周期：** 2026.05.20 — 2026.08.16（13 周）  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署
 
 ---
 
@@ -22,6 +22,7 @@
 | **Week 10** | 07.20 - 07.26 | 金鱼目标检测实战 | XML 标注解析、K-Means Anchor 聚类、YOLOv3 完整训练与推理、视频目标检测、损失函数对比优化 |
 | **Week 11** | 07.27 - 08.02 | YOLOv5 目标检测 | YOLOv5 架构（CSPDarknet53/C3/SPPF）、训练核心机制、PCB 六类缺陷实战训练、P/R/mAP 评估、detect.py 推理部署 |
 | **Week 12** | 08.03 - 08.09 | 骨龄评估系统 & YOLOv8-pose | 两阶段骨龄评估（7类骨检测+9关节分类+RUS计分/数据驱动校准）、RSNA 真实骨龄验证、YOLOv8-pose 解读与 luosi-keypoint 关键点训练 |
+| **Week 13** | 08.10 - 08.16 | 动作识别 & 分割与 ONNX 部署 | 人体动作识别（YOLOv8-pose 关键点特征）、Br35H 脑肿瘤分割（YOLOv8-seg）、YOLO 系列 ONNX 部署推理、IoU 多目标跟踪 |
 ---
 
 ## 📂 项目结构
@@ -156,6 +157,31 @@ step1/
 │   ├── rsna_tmp/                 — RSNA 骨龄挑战赛数据（真实骨龄标签）
 │   ├── luosi-keypoint/           — 螺丝 6 关键点数据集（LabelMe 标注, 已 .gitignore）
 │   └── ultralytics-8.4.113/      — ultralytics 源码（已 .gitignore）
+│
+├── week13/         # 人体动作识别 + 脑肿瘤分割 + YOLO ONNX 部署
+│   ├── 0810.ipynb / 0810.html        — 基于 YOLOv8-pose 的人体动作识别（9 类动作）
+│   ├── 0812_onnx.ipynb               — YOLOv5 ONNX 部署推理教程
+│   ├── 0812.ipynb / 0812.html        — YOLOv5/YOLOv8/YOLOv8-pose ONNX 推理
+│   ├── 0813.ipynb / 0813.html        — YOLOv8 视频检测 + IoU 多目标跟踪
+│   ├── seg_train.py                  — YOLOv8s-seg 脑肿瘤分割训练
+│   ├── seg_detect.py                 — 肿瘤掩码黑底抠图部署
+│   ├── smoke_test.py                 — 6GB 显存冒烟测试（1 epoch）
+│   ├── 20260810/12/13钱富森.pdf      — 逐日 PDF 笔记
+│   ├── action_train/                 — 9 类动作数据集（已 .gitignore）
+│   ├── action_train_pose_out/        — 关键点检测可视化输出（已 .gitignore）
+│   ├── feats.txt                     — 34 维关键点特征库（已 .gitignore）
+│   ├── Br35HDet/                     — 脑肿瘤 Br35H 数据集与转换脚本
+│   │   ├── change_json_key_1.py      — 标注 JSON key 规范化
+│   │   ├── cv_lablme_2.py            — VIA regions → LabelMe 标准格式
+│   │   ├── cv_yolov8seg_3.py         — LabelMe → YOLOv8-seg 格式
+│   │   ├── split_train_val_4.py      — train/val 划分 + dataset.yaml
+│   │   ├── Br35HDet/                 — 原始图片与标注（已 .gitignore）
+│   │   ├── yolo_all/                 — YOLO-seg 中间产物（已 .gitignore）
+│   │   └── yolodataset/              — 划分后的训练/验证集（已 .gitignore）
+│   ├── runs/                         — 分割训练输出 seg_train/smoke_test（已 .gitignore）
+│   ├── onnx_models/                  — ONNX 模型 yolov5su/yolov8n/yolov8n-pose（已 .gitignore）
+│   ├── tumor_crop_out/               — 肿瘤抠图输出（已 .gitignore）
+│   └── car.mp4 / car2.mp4            — 检测/跟踪测试视频（已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -412,6 +438,37 @@ step1/
 #### 🥦 其他
 
 - 蔬菜分类训练（迁移学习实战）与 `qianyixuexi.py` 迁移学习脚本
+
+---
+
+### Week 13 — 人体动作识别 + 脑肿瘤分割 + ONNX 部署（08.10 - 08.16）
+
+#### 🕺 人体动作识别（0810.ipynb）
+
+- **9 类动作数据集** `action_train/`：left / right / pause / shut / up / 0k / right_fly / left_fly / open
+- **YOLOv8n-pose 批量关键点提取**：COCO 预训练权重直接推理，输出 17 个人体关键点，可视化保存到 `action_train_pose_out/`
+- **`PoseDetect` 特征提取**：34 维归一化特征（以双肩中点为原点、肩宽为尺度归一化 → 抗平移/缩放；不可见关键点置 0）
+- **`PoseFeatureExtractor` + `FeatureLibrary`**：按动作类别构建模板特征库，生成 `feats.txt` 供动作匹配识别
+
+#### 🚗 YOLO 系列 ONNX 部署推理（0812_onnx.ipynb / 0812.ipynb）
+
+- **YOLOv5 ONNX**：输入 1×3×640×640、输出 1×84×8400，拆分「前处理 → 推理 → 后处理」，OpenCV NMS 去重（conf=0.5, IoU=0.45）
+- **YOLOv8 ONNX**：`yolov8n.onnx` 推理，COCO 80 类，逐类着色标注
+- **YOLOv8-pose ONNX**：`yolov8n-pose.onnx` 关键点推理，`filter_pose` 后处理（置信度过滤 + 坐标还原）+ 17 关键点骨架可视化
+
+#### 🎥 视频检测与多目标跟踪（0813.ipynb）
+
+- **`yolov8_detector`**：YOLOv8 逐帧检测 `car2.mp4`（3411 帧）
+- **`IOU_tracker`**：IoU 贪心匹配多目标跟踪器 —— 检测 → IoU 匹配 → 更新/新建/删除轨迹，为每个目标分配稳定 ID；`lost` 计数容忍短暂遮挡/漏检
+- 输出带跟踪标注视频 `track_out2.mp4`（画框 + ID）
+
+#### 🧠 Br35H 脑肿瘤分割（YOLOv8-seg）
+
+- **数据转换流水线**：`change_json_key_1.py`（key 规范化）→ `cv_lablme_2.py`（VIA regions → LabelMe）→ `cv_yolov8seg_3.py`（LabelMe → YOLOv8-seg）→ `split_train_val_4.py`（train/val 划分 + `dataset.yaml`）
+- **冒烟测试** `smoke_test.py`：验证 imgsz=512、batch=16 在 6GB 显存可正常训练（1 epoch）
+- **训练** `seg_train.py`：YOLOv8s-seg 预训练迁移学习，100 epochs（关 AMP 自动检查）
+- **结果**：Box **mAP50=0.945 / mAP50-95=0.813**（P=0.894, R=0.898）；Mask **mAP50=0.919 / mAP50-95=0.763**
+- **部署抠图** `seg_detect.py`：验证集肿瘤掩码黑底抠图 → `tumor_crop_out/`（每张肿瘤独立保存）
 
 ---
 
