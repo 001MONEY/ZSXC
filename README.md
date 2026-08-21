@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.08.16（13 周）  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署
+> **周期：** 2026.05.20 — 2026.08.21（14 周）  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失
 
 ---
 
@@ -23,6 +23,7 @@
 | **Week 11** | 07.27 - 08.02 | YOLOv5 目标检测 | YOLOv5 架构（CSPDarknet53/C3/SPPF）、训练核心机制、PCB 六类缺陷实战训练、P/R/mAP 评估、detect.py 推理部署 |
 | **Week 12** | 08.03 - 08.09 | 骨龄评估系统 & YOLOv8-pose | 两阶段骨龄评估（7类骨检测+9关节分类+RUS计分/数据驱动校准）、RSNA 真实骨龄验证、YOLOv8-pose 解读与 luosi-keypoint 关键点训练 |
 | **Week 13** | 08.10 - 08.16 | 动作识别 & 分割与 ONNX 部署 | 人体动作识别（YOLOv8-pose 关键点特征）、Br35H 脑肿瘤分割（YOLOv8-seg）、YOLO 系列 ONNX 部署推理、IoU 多目标跟踪 |
+| **Week 14** | 08.17 - 08.21 | 模型压缩 & TensorRT 部署 & 度量学习 | 模型剪枝/蒸馏/量化三件套、TensorRT FP16/INT8 引擎推理对比、CenterLoss/ArcFace 训练 MNIST 二维特征可视化 |
 ---
 
 ## 📂 项目结构
@@ -182,6 +183,16 @@ step1/
 │   ├── onnx_models/                  — ONNX 模型 yolov5su/yolov8n/yolov8n-pose（已 .gitignore）
 │   ├── tumor_crop_out/               — 肿瘤抠图输出（已 .gitignore）
 │   └── car.mp4 / car2.mp4            — 检测/跟踪测试视频（已 .gitignore）
+│
+├── week14/         # 模型压缩 + TensorRT 部署 + 度量学习损失
+│   ├── 0817.ipynb / 0817.html        — 模型压缩三件套：剪枝 / 蒸馏 / 量化 + TensorRT/OpenVINO 导出
+│   ├── 0819.ipynb / 0819.html        — TensorRT engine 推理：FP16 vs INT8 速度/精度对比
+│   ├── 0821.ipynb / 0821.html        — CenterLoss / ArcFace 训练 MNIST 二维特征可视化 + YOLOv8 ONNX 推理
+│   ├── 20260817/19/21钱富森.pdf      — 逐日 PDF 笔记
+│   ├── trt_utils.py                  — TensorRT engine 加载 / IO 打印工具
+│   ├── params/                       — MobileNet / 剪枝 / 重训模型权重与 ONNX
+│   ├── data/                         — MNIST 数据集
+│   └── yolo_engine_out/              — YOLO TensorRT 引擎输出图（已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -469,6 +480,32 @@ step1/
 - **训练** `seg_train.py`：YOLOv8s-seg 预训练迁移学习，100 epochs（关 AMP 自动检查）
 - **结果**：Box **mAP50=0.945 / mAP50-95=0.813**（P=0.894, R=0.898）；Mask **mAP50=0.919 / mAP50-95=0.763**
 - **部署抠图** `seg_detect.py`：验证集肿瘤掩码黑底抠图 → `tumor_crop_out/`（每张肿瘤独立保存）
+
+---
+
+### Week 14 — 模型压缩 + TensorRT 部署 + 度量学习损失（08.17 - 08.21）
+
+#### ✂️ 模型压缩三件套（0817.ipynb）
+
+- **剪枝（Pruning）**：`torch.nn.utils.prune` 对 MobileNetV2 剪枝——把数值接近 0 的不重要权重清零，模型更省内存、推理更快、精度基本不掉；剪枝后重训（retrain）恢复精度
+- **蒸馏（Distillation）**：大模型（教师）软标签指导小模型（学生）学习，用更小的模型逼近大模型精度
+- **量化（Quantization）**：FP16 / INT8 低精度表示，模型体积大幅缩小
+- **部署导出**：TensorRT FP16/INT8 engine 与 OpenVINO INT8 导出
+- **产物**：`params/` 下 `model_mobilenet.pt` / `model_prune.pt` / `model_retrain.pt` / `mobilenet.onnx` / `prune.onnx` / `retrain.onnx`
+
+#### ⚡ TensorRT 部署（0819.ipynb）
+
+- **`trt_utils.py`**：TensorRT engine 加载工具（剥离 ultralytics 导出的元数据头）+ IO 信息打印
+- **FP16 vs INT8 引擎对比**：`yolov8n_fp16.engine` / `yolov8n_int8.engine`（COCO 80 类）
+- **性能**：FP16 ~25ms/张、INT8 ~20ms/张（含前后处理）；`mobilenet.onnx` 转 FP16 引擎约 55s、6MB
+
+#### 📐 度量学习损失（0821.ipynb）
+
+- **CenterLoss**：让同类特征向类中心聚拢，类内更紧凑（$L = L_{cls} + \lambda L_{center}$）
+- **ArcFace（加性角度间隔）**：特征/权重 L2 归一化后对真实类别角度加 margin：$L=-\log\dfrac{e^{s\cos(\theta_{y_i}+m)}}{e^{s\cos(\theta_{y_i}+m)}+\sum_{j\neq y_i}e^{s\cos\theta_j}}$
+- **踩坑修复**：`cos_theta` 不能 clamp 到 ±1（`sin_theta=0` 导致梯度除以 0 → NaN、图片空白），应 clamp 到 $\pm(1-10^{-7})$
+- **结果**：2 维特征可视化，ArcFace 200 epochs 训练集 acc 最高 **99.88%**，loss 收敛到由 margin 决定的理论下限 ~0.70
+- **其他**：Python 装饰器示例（计时/工厂/叠加/类装饰器）、YOLOv8 ONNX 推理
 
 ---
 
