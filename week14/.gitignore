@@ -1,0 +1,8 @@
+# 训练可视化输出图片
+images1/
+images2/
+images3
+images4
+
+# YOLO 推理输出结果图
+yolo_onnx_out.jpg
