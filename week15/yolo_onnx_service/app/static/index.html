@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YOLOv8n ONNX 目标检测演示</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0a0f1d;
+    --surface: #111827;
+    --surface-raised: #182235;
+    --surface-soft: #0d1526;
+    --border: #263349;
+    --border-strong: #35445d;
+    --text: #e8edf6;
+    --muted: #91a0b8;
+    --subtle: #64748b;
+    --accent: #8b5cf6;
+    --accent-strong: #7c3aed;
+    --accent-soft: rgba(139, 92, 246, .14);
+    --success: #4ade80;
+    --danger: #fb7185;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    font-family: Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    background:
+      radial-gradient(circle at 50% -20%, rgba(124, 58, 237, .16), transparent 35%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  button, input { font: inherit; }
+  .app-shell {
+    width: min(1180px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 26px 0 34px;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 22px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+  }
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(145deg, var(--accent), #6366f1);
+    box-shadow: 0 10px 30px rgba(124, 58, 237, .24);
+    font-weight: 800;
+    letter-spacing: -.5px;
+  }
+  .brand h1 { font-size: 21px; line-height: 1.2; letter-spacing: -.3px; }
+  .brand p { margin-top: 4px; color: var(--muted); font-size: 13px; }
+  .runtime-badge {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 7px 11px;
+    color: var(--muted);
+    background: rgba(17, 24, 39, .7);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .runtime-badge::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 7px;
+    background: var(--success);
+    box-shadow: 0 0 0 4px rgba(74, 222, 128, .1);
+  }
+  .workspace-card,
+  .panel,
+  .result-table-wrap {
+    border: 1px solid var(--border);
+    background: rgba(17, 24, 39, .9);
+    box-shadow: 0 16px 50px rgba(0, 0, 0, .18);
+  }
+  .workspace-card {
+    border-radius: 16px;
+    padding: 16px;
+  }
+  .drop-zone {
+    min-height: 132px;
+    border: 1px dashed var(--border-strong);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    cursor: pointer;
+    transition: border-color .2s, background .2s, transform .2s;
+    background: var(--surface-soft);
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    transform: translateY(-1px);
+  }
+  .upload-icon {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--accent-soft);
+    color: #c4b5fd;
+    font-size: 22px;
+  }
+  .upload-copy strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .upload-copy span {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: minmax(250px, .8fr) minmax(220px, 1.4fr) auto;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 4px 0;
+  }
+  .threshold-head {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .threshold-head .val { color: #c4b5fd; font-weight: 700; }
+  .controls input[type=range] { width: 100%; accent-color: var(--accent); }
+  .file-meta {
+    min-width: 0;
+    color: var(--muted);
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-meta::before { content: "文件 · "; color: var(--subtle); }
+  .file-meta.is-error { color: var(--danger); }
+  #detectBtn {
+    min-width: 126px;
+    padding: 11px 20px;
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(124, 58, 237, .22);
+    transition: transform .15s, filter .15s;
+  }
+  #detectBtn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+  #detectBtn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 24px 2px 12px;
+  }
+  .section-heading h2 { font-size: 15px; }
+  .section-heading p { color: var(--muted); font-size: 12px; }
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .panel {
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .panel .title {
+    min-height: 45px;
+    padding: 0 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .panel .title .badge { color: #c4b5fd; font-weight: 500; font-size: 12px; }
+  .media-stage {
+    aspect-ratio: 16 / 10;
+    display: grid;
+    place-items: center;
+    background:
+      linear-gradient(45deg, rgba(255,255,255,.018) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.018) 75%),
+      linear-gradient(45deg, rgba(255,255,255,.018) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.018) 75%),
+      #080e1b;
+    background-size: 24px 24px;
+    background-position: 0 0, 12px 12px;
+    overflow: hidden;
+  }
+  .media-stage img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+  }
+  .panel .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    color: var(--subtle);
+    font-size: 13px;
+  }
+  .empty-symbol { font-size: 22px; opacity: .8; }
+  .result-table-wrap { margin-top: 18px; border-radius: 14px; overflow: hidden; }
+  .result-table-wrap .title {
+    padding: 14px 15px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 11px 15px; text-align: left; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: 0; }
+  th { color: var(--muted); font-weight: 600; background: var(--surface-soft); }
+  td { font-family: Consolas, monospace; }
+  .tag {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 6px;
+    background: var(--accent-soft);
+    color: #c4b5fd;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .confidence { color: var(--success); font-weight: 700; }
+  .empty-row { text-align: center; color: var(--subtle); padding: 22px; }
+  footer { padding-top: 18px; text-align: center; color: var(--subtle); font-size: 11px; }
+  @media (max-width: 800px) {
+    .app-shell { width: min(100% - 24px, 1180px); padding-top: 18px; }
+    .topbar { align-items: flex-start; }
+    .runtime-badge { display: none; }
+    .controls { grid-template-columns: 1fr; gap: 13px; }
+    #detectBtn { width: 100%; }
+    .panels { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    .brand-mark { width: 38px; height: 38px; border-radius: 10px; }
+    .brand h1 { font-size: 18px; }
+    .brand p { display: none; }
+    .workspace-card { padding: 12px; }
+    .drop-zone { min-height: 118px; padding: 18px; justify-content: flex-start; }
+    .section-heading p { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">YO</div>
+      <div>
+        <h1>YOLOv8n 检测工作台</h1>
+        <p>上传图片并查看 ONNX 模型的目标检测结果</p>
+      </div>
+    </div>
+    <div class="runtime-badge">ONNX Runtime · CPU</div>
+  </header>
+
+  <main>
+    <section class="workspace-card" aria-label="上传与检测设置">
+      <div class="drop-zone" id="dropZone">
+        <div class="upload-icon" aria-hidden="true">↑</div>
+        <div class="upload-copy">
+          <strong>选择图片或拖放到这里</strong>
+          <span>支持 JPG、PNG、WebP，单张不超过 10 MB</span>
+        </div>
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" hidden>
+      </div>
+
+      <div class="controls">
+        <div class="threshold-control">
+          <div class="threshold-head">
+            <label for="conf">置信度阈值</label>
+            <span class="val" id="confValue">0.25</span>
+          </div>
+          <input type="range" id="conf" min="0.05" max="0.9" step="0.05" value="0.25">
+        </div>
+        <span class="file-meta" id="fileName" aria-live="polite">尚未选择图片</span>
+        <button type="button" id="detectBtn" disabled>开始检测</button>
+      </div>
+    </section>
+
+    <section aria-labelledby="resultsTitle">
+      <div class="section-heading">
+        <h2 id="resultsTitle">检测对比</h2>
+        <p>原始输入与模型标注结果</p>
+      </div>
+      <div class="panels">
+        <article class="panel">
+          <div class="title">原始图片 <span class="badge" id="sizeInfo"></span></div>
+          <div class="media-stage">
+            <div class="empty" id="origEmpty"><span class="empty-symbol">◇</span><span>等待上传图片</span></div>
+            <img id="origImg" alt="上传的原始图片" hidden>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="title">检测结果 <span class="badge" id="countInfo"></span></div>
+          <div class="media-stage" aria-live="polite">
+            <div class="empty" id="annoEmpty"><span class="empty-symbol">⌁</span><span>运行检测后在这里查看结果</span></div>
+            <img id="annoImg" alt="带目标检测框的图片" hidden>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="result-table-wrap" aria-labelledby="detailsTitle">
+      <div class="title" id="detailsTitle">检测明细</div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>#</th><th>类别</th><th>置信度</th><th>框坐标 (x1, y1, x2, y2)</th></tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="4" class="empty-row">暂无检测数据</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>YOLOv8n · FastAPI · ONNX Runtime</footer>
+</div>
+
+<script>
+const dropZone   = document.getElementById('dropZone');
+const fileInput  = document.getElementById('fileInput');
+const confSlider = document.getElementById('conf');
+const confValue  = document.getElementById('confValue');
+const fileName   = document.getElementById('fileName');
+const detectBtn  = document.getElementById('detectBtn');
+
+const origImg  = document.getElementById('origImg');
+const annoImg  = document.getElementById('annoImg');
+const origEmpty = document.getElementById('origEmpty');
+const annoEmpty = document.getElementById('annoEmpty');
+const sizeInfo = document.getElementById('sizeInfo');
+const countInfo = document.getElementById('countInfo');
+const tbody    = document.getElementById('tbody');
+
+let currentFile = null;
+let originalObjectUrl = null;
+let annotatedObjectUrl = null;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+// ---------- 置信度滑块 ----------
+confSlider.addEventListener('input', () => {
+  confValue.textContent = parseFloat(confSlider.value).toFixed(2);
+});
+
+// ---------- 选择 / 拖拽图片 ----------
+function setFile(file) {
+  fileName.classList.remove('is-error');
+  if (!file || !file.type.startsWith('image/')) {
+    currentFile = null;
+    detectBtn.disabled = true;
+    fileName.textContent = '请选择 JPG、PNG 或 WebP 图片';
+    fileName.classList.add('is-error');
+    return;
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    currentFile = null;
+    detectBtn.disabled = true;
+    fileName.textContent = '图片超过 10 MB，请选择更小的文件';
+    fileName.classList.add('is-error');
+    return;
+  }
+  currentFile = file;
+  fileName.textContent = `${file.name} · ${(file.size / 1024).toFixed(1)} KB`;
+  detectBtn.disabled = false;
+  if (originalObjectUrl) URL.revokeObjectURL(originalObjectUrl);
+  originalObjectUrl = URL.createObjectURL(file);
+  origImg.src = originalObjectUrl;
+  origImg.hidden = false;
+  origEmpty.hidden = true;
+  annoImg.hidden = true;
+  annoEmpty.hidden = false;
+  annoEmpty.textContent = '运行检测后在这里查看结果';
+  sizeInfo.textContent = '';
+  countInfo.textContent = '';
+  tbody.innerHTML = '<tr><td colspan="4" class="empty-row">暂无检测数据</td></tr>';
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => setFile(e.target.files[0]));
+
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  setFile(e.dataTransfer.files[0]);
+});
+
+// ---------- 开始检测 ----------
+detectBtn.addEventListener('click', async () => {
+  if (!currentFile) return;
+  detectBtn.disabled = true;
+  detectBtn.textContent = '检测中…';
+  annoImg.hidden = true;
+  annoEmpty.hidden = false;
+  annoEmpty.textContent = '模型推理中，请稍候…';
+
+  try {
+    const conf = parseFloat(confSlider.value);
+
+    // 1) 调用 /detect 拿检测结果 JSON
+    //    注意：conf 是查询参数（后端签名 conf: float = 0.25），
+    //    必须拼在 URL 的 ?conf= 后面，放 FormData 里后端收不到！
+    const fd1 = new FormData();
+    fd1.append('file', currentFile);
+    const r1 = await fetch(`/detect?conf=${conf}`, { method: 'POST', body: fd1 });
+    if (!r1.ok) throw new Error('检测接口返回 ' + r1.status);
+    const data = await r1.json();
+
+    // 2) 调用 /annotate 拿画好框的图
+    const fd2 = new FormData();
+    fd2.append('file', currentFile);
+    const r2 = await fetch(`/annotate?conf=${conf}`, { method: 'POST', body: fd2 });
+    if (!r2.ok) throw new Error('标注接口返回 ' + r2.status);
+    const blob = await r2.blob();
+
+    // 展示
+    if (annotatedObjectUrl) URL.revokeObjectURL(annotatedObjectUrl);
+    annotatedObjectUrl = URL.createObjectURL(blob);
+    annoImg.src = annotatedObjectUrl;
+    annoImg.hidden = false;
+    annoEmpty.hidden = true;
+    sizeInfo.textContent = `${data.width} × ${data.height}`;
+    countInfo.textContent = `${data.num_detections} 个目标`;
+    renderTable(data.detections);
+  } catch (err) {
+    annoImg.hidden = true;
+    annoEmpty.hidden = false;
+    annoEmpty.textContent = '检测失败：' + err.message;
+  } finally {
+    detectBtn.disabled = false;
+    detectBtn.textContent = '开始检测';
+  }
+});
+
+// ---------- 渲染明细表 ----------
+function renderTable(detections) {
+  if (detections.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-row">没有检测到目标，试试调低置信度阈值</td></tr>';
+    return;
+  }
+  tbody.innerHTML = detections.map((d, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><span class="tag">${d.class_name}</span> (id=${d.class_id})</td>
+      <td class="confidence">${d.confidence}</td>
+      <td>${d.bbox.join(', ')}</td>
+    </tr>`).join('');
+}
+</script>
+</body>
+</html>

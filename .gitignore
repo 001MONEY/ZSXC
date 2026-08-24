@@ -7,6 +7,10 @@ __pycache__/
 # 模型权重文件（体积大，不纳入版本控制）
 *.pth
 *.pt
+*.onnx
+
+# YOLO 推理服务测试输出
+annotated_out.jpg
 
 # 训练输出结果（图片等）
 save_results/

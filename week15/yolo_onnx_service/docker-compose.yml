@@ -1,0 +1,23 @@
+# YOLOv8n ONNX 推理服务 —— Docker Compose
+# 用法：
+#   docker compose up -d --build   首次构建并启动（-d 后台运行）
+#   docker compose logs -f         查看日志
+#   docker compose down            停止并删除容器
+#   docker compose ps              查看状态
+services:
+  yolo-onnx-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: yolo-onnx-service:latest
+    container_name: yolo-onnx-service
+    restart: unless-stopped
+
+    # 宿主机 8001 端口 -> 容器内 8000
+    # （8000 留给其他服务，避免端口冲突）
+    ports:
+      - "8001:8000"
+
+    environment:
+      - MODEL_PATH=/app/models/yolov8n.onnx
+      - PYTHONUNBUFFERED=1
