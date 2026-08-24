@@ -16,6 +16,8 @@
 """
 import argparse
 import sys
+import time
+from functools import wraps
 from pathlib import Path
 
 import cv2
@@ -38,6 +40,56 @@ CROP_TF = transforms.Compose([
 ])
 PAD = 6          # 裁剪时向外扩的像素
 CONF_THRESH = 0.25
+
+
+# ---------------------------------------------------------------- 模块计时
+# 用装饰器统计每个模块的推理耗时，结果累加到全局 TIMINGS（毫秒）。
+# 用法：在模块方法上加 @timed("模块名")；
+#       单张图片推理前调用 reset_timing()，推理后调用 report_timing() 打印耗时表。
+TIMINGS = {}     # {模块名: {"ms": 累计毫秒, "n": 调用次数}}
+
+
+def timed(name=None):
+    """装饰器：统计被装饰函数的累计推理耗时（毫秒），累加到全局 TIMINGS。"""
+    def deco(fn):
+        key = name or fn.__qualname__
+
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            t0 = time.perf_counter()
+            result = fn(*args, **kwargs)
+            dt = (time.perf_counter() - t0) * 1000.0
+            rec = TIMINGS.setdefault(key, {"ms": 0.0, "n": 0})
+            rec["ms"] += dt
+            rec["n"] += 1
+            return result
+
+        return wrapper
+    return deco
+
+
+def reset_timing():
+    """清空计时统计，用于开始统计单张（或一批）图片。"""
+    TIMINGS.clear()
+
+
+def snapshot_timing():
+    """返回 {模块名: 毫秒}，不清空统计。"""
+    return {k: round(v["ms"], 2) for k, v in TIMINGS.items()}
+
+
+def report_timing():
+    """打印各模块耗时统计表，返回 {模块名: 毫秒}。"""
+    total = sum(v["ms"] for v in TIMINGS.values())
+    print(f"\n{'模块':<14}{'总耗时(ms)':>12}{'次数':>8}{'平均(ms)':>12}{'占比':>10}")
+    print("-" * 60)
+    for k, v in sorted(TIMINGS.items(), key=lambda kv: -kv[1]["ms"]):
+        avg = v["ms"] / v["n"] if v["n"] else 0.0
+        pct = v["ms"] / total * 100 if total else 0.0
+        print(f"{k:<14}{v['ms']:>12.1f}{v['n']:>8d}{avg:>12.2f}{pct:>9.1f}%")
+    print("-" * 60)
+    print(f"{'合计':<14}{total:>12.1f}")
+    return {k: round(v["ms"], 2) for k, v in TIMINGS.items()}
 
 
 # ---------------------------------------------------------------- 模型加载
@@ -83,6 +135,55 @@ class Pipeline:
         m.to(DEVICE).eval()
         return m, gl, ordinal
 
+    # ---- 各模块（用 @timed 统计推理耗时） ----
+    @timed("1 预处理")
+    def _preprocess(self, img):
+        """CLAHE 预处理：灰度 → 中值滤波 → CLAHE → BGR。"""
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        gray = cv2.medianBlur(gray, 3)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        eq = clahe.apply(gray)
+        return cv2.cvtColor(eq, cv2.COLOR_GRAY2BGR)
+
+    @timed("2 检测")
+    def _detect(self, img):
+        """YOLO 目标检测 → (类别, 置信度, box) 列表。"""
+        r = self.detector.predict(img, conf=CONF_THRESH, imgsz=640, verbose=False)[0]
+        return [(self.detector.names[int(b.cls)], float(b.conf), b.xyxy[0].tolist())
+                for b in r.boxes]
+
+    @timed("3 过滤")
+    def _filter(self, dets):
+        """从检测结果中挑选 RUS 13 骨。"""
+        return filter_13_bones(dets)
+
+    @timed("5 计分")
+    def _score(self, grades, sex, require_all):
+        """13 骨等级 → RUS 总分/骨龄（或数据驱动校准骨龄）。"""
+        if self.calibrated:
+            import scoring as _sc
+            tables = _sc.load_tables()
+            feat = []
+            for bone in _sc.RUS_13:
+                g = grades.get(bone)
+                feat.append(_sc.grade_to_score(bone, g, tables) if g is not None else None)
+            X = self.calib["imputer"].transform([feat])[0].reshape(1, -1)
+            months = float(self.calib["model"].predict(X)[0])
+            return {"sex": sex, "total_score": None,
+                    "bone_age_years": round(months / 12.0, 2),
+                    "bone_age_months": round(months, 1),
+                    "bone_age_range": (None, None),
+                    "detail": [{"bone": b, "grade": grades.get(b), "score": f}
+                               for b, f in zip(_sc.RUS_13, feat)],
+                    "missing": [b for b in _sc.RUS_13 if b not in grades],
+                    "method": "calibrated"}
+        result = scoring.summarize(grades, sex=sex, require_all=require_all)
+        result["method"] = "rus-chn"
+        if result["bone_age_years"] is not None:
+            result["bone_age_months"] = round(result["bone_age_years"] * 12.0, 1)
+        return result
+
+    @timed("4 分类(13骨累计)")
     def _classify_crop(self, joint, img, box):
         m, gl, ordinal = self.clfs[joint], self.grade_lists[joint], self.ordinals[joint]
         x1, y1, x2, y2 = [int(v) for v in box]
@@ -102,52 +203,29 @@ class Pipeline:
         do_preprocess: 对原始 X 光片自动做 CLAHE 预处理（灰度+中值滤波+CLAHE），
         与训练数据一致。用户上传原始片时应设为 True（模型在预处理图上训练）。
         注意：已预处理过的图（detection_pre / rsna_val_pre）不要重复处理，保持 False。
+
+        各模块耗时由 @timed 装饰器统计，随结果写入 result["timings_ms"]；
+        单张图片想得到纯净的耗时，请在调用前 reset_timing()。
         """
         img = cv2.imread(str(image_path))
         if img is None:
             raise FileNotFoundError(f"无法读取图片: {image_path}")
         if do_preprocess:
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            gray = cv2.medianBlur(gray, 3)
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            eq = clahe.apply(gray)
-            img = cv2.cvtColor(eq, cv2.COLOR_GRAY2BGR)
+            img = self._preprocess(img)
 
-        r = self.detector.predict(img, conf=CONF_THRESH,
-                                  imgsz=640, verbose=False)[0]
-        dets = [(self.detector.names[int(b.cls)], float(b.conf), b.xyxy[0].tolist())
-                for b in r.boxes]
-        bones, missing = filter_13_bones(dets)
+        dets = self._detect(img)
+        bones, missing = self._filter(dets)
 
         grades = {}
         for rid, info in bones.items():
             grades[rid] = self._classify_crop(info["classifier"], img, info["box"])
 
-        if self.calibrated:
-            # 数据驱动校准：13 骨得分 → 骨龄(月)
-            import scoring as _sc
-            tables = _sc.load_tables()
-            feat = []
-            for bone in _sc.RUS_13:
-                g = grades.get(bone)
-                feat.append(_sc.grade_to_score(bone, g, tables) if g is not None else None)
-            X = self.calib["imputer"].transform([feat])[0].reshape(1, -1)
-            months = float(self.calib["model"].predict(X)[0])
-            result = {"sex": sex, "total_score": None, "bone_age_years": round(months / 12.0, 2),
-                      "bone_age_months": round(months, 1), "bone_age_range": (None, None),
-                      "detail": [{"bone": b, "grade": grades.get(b), "score": f}
-                                  for b, f in zip(_sc.RUS_13, feat)],
-                      "missing": [b for b in _sc.RUS_13 if b not in grades],
-                      "method": "calibrated"}
-        else:
-            result = scoring.summarize(grades, sex=sex, require_all=require_all)
-            result["method"] = "rus-chn"
-            if result["bone_age_years"] is not None:
-                result["bone_age_months"] = round(result["bone_age_years"] * 12.0, 1)
+        result = self._score(grades, sex=sex, require_all=require_all)
         result["image"] = str(image_path)
         result["n_bones"] = len(bones)
         result["detections"] = dets
         result["bones"] = {rid: {**info, "grade": grades.get(rid)} for rid, info in bones.items()}
+        result["timings_ms"] = snapshot_timing()
         return result
 
     # ---- 可视化 ----
@@ -190,7 +268,12 @@ def main():
     pipe = Pipeline(ordinal_all=not args.use_ce, calibrated=args.calibrated)
 
     if args.image:
+        reset_timing()   # 只统计这一张图
+        t0 = time.perf_counter()
         res = pipe.predict(args.image, sex=args.sex, do_preprocess=args.do_preprocess)
+        wall = (time.perf_counter() - t0) * 1000.0
+        report_timing()
+        print(f"\n整条流水线实际耗时: {wall:.1f} ms")
         print(f"图片: {res['image']}")
         print(f"检出骨头: {res['n_bones']}/13  缺失: {res['missing']}")
         print("13 骨等级:")
@@ -211,12 +294,14 @@ def main():
         out_dir.mkdir(parents=True, exist_ok=True)
         imgs = sorted((config.DETECTION_PRE / "images" / "val").glob("*.png"))[:args.n]
         for p in imgs:
+            reset_timing()   # 逐张清零，统计每张图的模块耗时
             res = pipe.predict(p, sex=args.sex)
             vis = pipe.visualize(res)
             fname = out_dir / f"{p.stem}.jpg"
             cv2.imwrite(str(fname), vis)
+            total = sum(res["timings_ms"].values())
             print(f"[OK] {p.stem}: 13骨={res['n_bones']} RUS={res['total_score']} "
-                  f"骨龄={res['bone_age_years']}y -> {fname}")
+                  f"骨龄={res['bone_age_years']}y 推理耗时={total:.1f}ms -> {fname}")
         return
 
     print("请指定 --image <path> 或 --demo")

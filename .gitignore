@@ -12,6 +12,9 @@ __pycache__/
 # YOLO 推理服务测试输出
 annotated_out.jpg
 
+# 截图（临时文件）
+ScreenShot_*.png
+
 # 训练输出结果（图片等）
 save_results/
 
