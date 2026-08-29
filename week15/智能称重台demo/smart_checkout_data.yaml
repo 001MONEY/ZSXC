@@ -1,0 +1,9 @@
+path: D:/project/step1/week15/智能称重台demo/yolo_dataset_raw
+train: images/train
+val: images/val
+
+names:
+  0: bag
+  1: bottle
+  2: box
+  3: cylinder

@@ -1,0 +1,7 @@
+PySide6
+numpy
+opencv-python
+onnxruntime-gpu
+Pillow
+PyMySQL
+torch

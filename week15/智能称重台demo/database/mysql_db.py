@@ -1,3 +1,14 @@
+"""MySQL 数据库操作辅助类（复用 week06 的 MySqlHelper）。
+
+保持项目自包含，无需依赖 week06 目录即可使用。
+
+连接参数支持环境变量覆盖（Docker 容器内连宿主机 MySQL 用）：
+  MYSQL_HOST / MYSQL_PORT / MYSQL_USER / MYSQL_PWD / MYSQL_DB
+宿主机不设置时使用默认值 localhost:3306 root/8888 smart_checkout。
+"""
+
+import os
+
 import pymysql
 from pymysql.err import OperationalError
 from pymysql.cursors import DictCursor
@@ -6,12 +17,12 @@ from pymysql.cursors import DictCursor
 class MySqlHelper:
     """MySQL 数据库操作辅助类"""
 
-    def __init__(self, host="localhost", port=3306, user="root", pwd="8888", db_name="smart_checkout"):
-        self.host = host
-        self.port = port
-        self.user = user
-        self.pwd = pwd
-        self.db_name = db_name
+    def __init__(self, host=None, port=None, user=None, pwd=None, db_name=None):
+        self.host = host or os.environ.get("MYSQL_HOST", "localhost")
+        self.port = int(port or os.environ.get("MYSQL_PORT", "3306"))
+        self.user = user or os.environ.get("MYSQL_USER", "root")
+        self.pwd = pwd or os.environ.get("MYSQL_PWD", "8888")
+        self.db_name = db_name or os.environ.get("MYSQL_DB", "smart_checkout")
         self.connection = None
         self.cursor = None
 
@@ -25,7 +36,7 @@ class MySqlHelper:
                 password=self.pwd,
                 database=self.db_name,
                 charset="utf8mb4",
-                cursorclass=DictCursor
+                cursorclass=DictCursor,
             )
             self.cursor = self.connection.cursor()
             return True

@@ -1,0 +1,42 @@
+# 视频素材（体积大，不入库）
+video/
+原始数据
+
+# 原始分类数据集及压缩包（体积大，可由脚本重建）
+classification_dataset_raw/
+classification_dataset_raw.zip
+
+# ---- 2026-08-27 补充忽略 ----
+
+# 分类数据集（可由 build_classification_dataset_from_videos.py 重建）
+classification_dataset_from_videos/
+分类数据集.zip
+
+# YOLO 训练数据（images/labels，可由提取脚本重建）
+yolo_dataset_raw/
+
+# 训练/推理全部输出：权重、特征库、标注视频、逐帧记录（均可由脚本重建）
+runs/
+
+# 未注册商品标定照片（阈值已标定固化，非代码）
+unknown_samples/
+
+# 预训练/下载权重
+models/
+*.pt
+
+# 第三方源码（Ultralytics 8.4.113，推理已切 ONNX 不再依赖；
+# 重训/重新导出需手动恢复：train_yolov8.py / export_onnx.py 会检测缺失）
+third_party/
+
+# work/ 下的临时检查产物目录（保留 work/*.py 检查脚本）
+work/*/
+work/__pycache__/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# VS Code 个人设置
+.vscode/

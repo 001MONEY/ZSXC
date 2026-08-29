@@ -1,0 +1,24 @@
+[project]
+name = "smart-checkout-qt"
+version = "1.0.0"
+description = "智能称重台 ONNX 实时识别桌面端"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "PySide6",
+    "numpy",
+    "opencv-python",
+    "onnxruntime-gpu",
+    "Pillow",
+    "PyMySQL",
+    "torch",
+]
+
+[tool.pyside6-project]
+files = [
+    "widget.py",
+    "inference_controller.py",
+    "engine_smoke_test.py",
+    "smoke_test.py",
+    "form.ui",
+    "ui_form.py",
+]
