@@ -565,48 +565,69 @@ step1/
 
 ---
 
-## 🧪 VisA 以图搜图项目
+## � 智能称重台演示 demo
 
-`visa_search/` 是一个基于内容的图像检索（CBIR）系统，在 VisA 工业异常检测数据集上实现相似图片搜索。
+`week15/智能称重台demo/` 是一个基于「目标检测 + 特征检索」的智能商品识别与结算原型系统。系统从摄像头或本地视频读取画面，完成「YOLO 检测包装 → 按大类 ResNet18 提取特征 → 特征库检索 → 开放集判定 → MySQL 查价 → 购物车结算」的完整闭环。
 
 ### 项目结构
 
 ```
-visa_search/
-├── main.py                  # 主入口：特征库构建 + 评估 + 演示
-├── model.py                 # 特征提取模型（MobileNetV2 / ResNet18）
-├── dataset.py               # 数据集样本收集与统计
-├── feature_lib.py           # 特征库构建、加载、搜索、评估
-├── config.py                # 配置文件（路径、模型、参数）
-├── app.py                   # Flask Web 应用（交互式检索）
-├── import_to_db.py          # 特征入库脚本
-├── visualize.py             # 可视化工具（检索结果展示）
-├── feats_visa.txt           # 预提取特征库文件
-├── static/                  # 静态资源
-└── templates/
-    └── index.html           # Web 前端页面
+智能称重台demo/
+├── smart_checkout_qt/                  # 最终答辩版 PySide6 桌面工程
+├── smart_checkout_ui/                  # 历史 Qt 实现（对照保留）
+├── database/                           # MySQL 连接与商品 DAO
+│   ├── mysql_db.py                     # PyMySQL 连接封装
+│   └── goods_dao.py                    # products 表数据访问层
+├── train_yolov8.py                     # YOLOv8n 四类包装检测训练
+├── train_resnet_classifier.py          # 4 个 ResNet18 分类模型训练
+├── build_feature_library.py            # 特征库构建（embeddings/centers）
+├── feature_library_updater.py          # Qt 注册后端（在线特征更新）
+├── register_from_video.py              # 多姿态视频注册/诊断
+├── export_onnx.py / verify_onnx.py     # ONNX 导出与一致性校验
+├── onnx_engine.py                      # ONNX Runtime 推理核心（letterbox/NMS/检索）
+├── pipeline_demo.py                    # 命令行端到端入口（视频/摄像头）
+├── 项目总结.md / MODEL_FREEZE.md       # 开发总结与模型冻结说明
+├── 智能称重台项目计划书.md             # 项目计划书
+└── 商品数据.xlsx                       # 24 SKU 商品信息
 ```
 
 ### 技术要点
 
-| 模块     | 技术                                           |
-| ------ | -------------------------------------------- |
-| 特征提取   | MobileNetV2（ImageNet 预训练），AdaptiveAvgPool 降维 |
-| 特征维度   | 1280 维                                       |
-| 相似度度量  | 余弦相似度                                        |
-| 检索策略   | 遍历特征库，按相似度降序排列取 Top-k                        |
-| 评估指标   | Top-1 / Top-5 准确率                            |
-| Web 框架 | Flask + HTML/CSS/JS                          |
+| 模块      | 技术                                                         |
+| ------- | ---------------------------------------------------------- |
+| 包装检测   | YOLOv8n ONNX：4 类（bag / bottle / box / cylinder）            |
+| 特征提取   | 4 个 ResNet18（按包装大类），去分类头输出 512 维 L2 归一化特征             |
+| 特征检索   | NumPy 余弦相似度：`0.7×类中心 + 0.3×同类 Top5 均值`                  |
+| 开放集判定  | sim / margin 双阈值拦截未注册商品（原24类 0.80/0.15；在线注册类 0.95/0.01） |
+| 商品数据库  | MySQL `smart_checkout.products`（初始 24 SKU，支持在线注册扩展）       |
+| 部署格式   | 1 个 YOLO ONNX + 4 个 ResNet ONNX，CUDA 优先、CPU 自动回退           |
+| 桌面界面   | PySide6/Qt：摄像头、本地视频、购物车、结算、重置、注册入口                   |
+| 稳定计数   | 25 帧稳定窗口生成购物车                                            |
+
+### 性能指标
+
+| 模型                        | 最佳验证指标                                                      |
+| ------------------------- | -----------------------------------------------------------:|
+| YOLOv8n 检测                | Precision 0.9946、Recall 0.9868、mAP50 0.9892、mAP50-95 0.7883 |
+| bag / bottle / box ResNet18 | Top-1 100%                                                  |
+| cylinder ResNet18          | Top-1 99.59%                                                |
+
+答辩验证：注册前 7 件 ¥38.60；现场注册阿萨姆奶茶（24→25 SKU）后 8 件 ¥41.60。
 
 ### 运行方式
 
-```bash
-# 激活环境后，进入 visa_search 目录
-cd week8/visa_search
+```powershell
+cd D:\project\step1\week15\智能称重台demo
 
-# 完整流程：构建特征库 + 评估 + 演示
-python main.py
+# 最终 Qt 答辩界面（需 MySQL 已启动）
+D:\project\step1\env\python.exe smart_checkout_qt\widget.py
 
-# 启动 Web 交互界面
-python app.py
+# 命令行端到端视频推理
+D:\project\step1\env\python.exe pipeline_demo.py `
+  --source "video\YOLO Data\val\VID_20260826_110333.mp4" --name final_verify
+
+# 摄像头实时推理（S 结算 / R 重置 / Esc 退出）
+D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 ```
+
+> 数据集、模型和视频体积较大，已被 `.gitignore` 排除；迁移项目时必须单独复制 `video/`、`runs/`、数据集和 MySQL 数据。
