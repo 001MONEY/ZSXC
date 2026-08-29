@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.08.21（14 周）  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失
+> **周期：** 2026.05.20 — 2026.08.28（14 周主课 + 智能称重台结课项目）  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目
 
 ---
 
@@ -24,6 +24,7 @@
 | **Week 12** | 08.03 - 08.09 | 骨龄评估系统 & YOLOv8-pose | 两阶段骨龄评估（7类骨检测+9关节分类+RUS计分/数据驱动校准）、RSNA 真实骨龄验证、YOLOv8-pose 解读与 luosi-keypoint 关键点训练 |
 | **Week 13** | 08.10 - 08.16 | 动作识别 & 分割与 ONNX 部署 | 人体动作识别（YOLOv8-pose 关键点特征）、Br35H 脑肿瘤分割（YOLOv8-seg）、YOLO 系列 ONNX 部署推理、IoU 多目标跟踪 |
 | **Week 14** | 08.17 - 08.21 | 模型压缩 & TensorRT 部署 & 度量学习 | 模型剪枝/蒸馏/量化三件套、TensorRT FP16/INT8 引擎推理对比、CenterLoss/ArcFace 训练 MNIST 二维特征可视化 |
+| **Week 15** | 08.24 - 08.28 | FastAPI 服务 & 智能称重台项目 | FastAPI 入门与 RESTful、YOLOv8n ONNX Docker 推理服务、智能称重台综合项目（YOLO 检测 + ResNet18 特征检索 + MySQL + PySide6 结算） |
 ---
 
 ## 📂 项目结构
@@ -193,6 +194,27 @@ step1/
 │   ├── params/                       — MobileNet / 剪枝 / 重训模型权重与 ONNX
 │   ├── data/                         — MNIST 数据集
 │   └── yolo_engine_out/              — YOLO TensorRT 引擎输出图（已 .gitignore）
+│
+├── week15/         # FastAPI/ONNX 服务 + 智能称重台综合项目
+│   ├── 0824.ipynb                    — FastAPI 入门（路由/类型校验/Pydantic/TestClient）
+│   ├── FastAPI_装饰器_RESTful完整版对话.md — FastAPI/装饰器/RESTful 对话笔记
+│   ├── yolo_onnx_service/            — YOLOv8n ONNX 推理服务（FastAPI + Docker 部署）
+│   │   ├── app/yolo_detector.py      — ONNX 推理封装（letterbox + NMS）
+│   │   ├── app/main.py               — FastAPI 接口（/detect /annotate /health）+ 托管前端
+│   │   ├── Dockerfile / docker-compose.yml — 容器化部署（8001→8000）
+│   │   └── client_test.py            — 本地测试客户端
+│   └── 智能称重台demo/               — 智能称重台：检测+分类+特征检索+MySQL+PySide6 结算
+│       ├── smart_checkout_qt/        — 最终答辩版 PySide6 工程
+│       ├── smart_checkout_ui/        — 历史 Qt 实现（对照保留）
+│       ├── database/                 — MySQL 连接与商品 DAO
+│       ├── train_yolov8.py           — YOLOv8n 四类包装检测训练
+│       ├── train_resnet_classifier.py — 4 个 ResNet18 分类模型训练
+│       ├── build_feature_library.py / feature_library_updater.py — 特征库构建/在线更新
+│       ├── register_goods.py / register_from_video.py — 在线商品注册
+│       ├── onnx_engine.py / export_onnx.py / verify_onnx.py — ONNX 推理/导出/校验
+│       ├── pipeline_demo.py / infer_video.py — 端到端流程与视频推理
+│       ├── 项目总结.md / MODEL_FREEZE.md / 智能称重台项目计划书.md — 项目文档
+│       └── 商品数据.xlsx             — 24 SKU 商品信息
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -506,6 +528,40 @@ step1/
 - **踩坑修复**：`cos_theta` 不能 clamp 到 ±1（`sin_theta=0` 导致梯度除以 0 → NaN、图片空白），应 clamp 到 $\pm(1-10^{-7})$
 - **结果**：2 维特征可视化，ArcFace 200 epochs 训练集 acc 最高 **99.88%**，loss 收敛到由 margin 决定的理论下限 ~0.70
 - **其他**：Python 装饰器示例（计时/工厂/叠加/类装饰器）、YOLOv8 ONNX 推理
+
+---
+
+### Week 15 — FastAPI/ONNX 服务 + 智能称重台综合项目（08.24 - 08.28）
+
+#### 🚀 FastAPI 入门（0824.ipynb）
+
+- **路由**：`@app.get()` / `@app.post()` 装饰器关联 URL 与函数；路径参数（`/items/{item_id}`）与查询参数（`?q=...`）
+- **类型校验**：声明 `item_id: int` 后自动校验，类型错误返回清晰提示
+- **Pydantic 数据模型**：描述请求体与响应数据，自动生成 JSON Schema
+- **自动文档**：`/docs`（Swagger UI）与 `/redoc`
+- **TestClient**：Notebook 中模拟客户端请求，无需启动服务器即可测试接口
+- 对话笔记：`FastAPI_装饰器_RESTful完整版对话.md`（装饰器/工厂/RESTful 全解）
+
+#### 🐳 YOLOv8n ONNX 推理服务（yolo_onnx_service）
+
+- 把 `yolov8n.onnx` + onnxruntime + FastAPI 封装成 **Docker 镜像**，对外提供 HTTP 目标检测能力
+- **`yolo_detector.py`**：letterbox 预处理 + NMS 后处理；`app/main.py`：FastAPI 接口并托管前端
+- **接口**：`GET /health`、`POST /detect`（返回检测框 JSON）、`POST /annotate`（返回标注图）、`/docs`
+- **Web 前端**：纯静态 HTML（上传图片 / 置信度滑块 / 原图标注对比 / 结果表格）
+- **部署**：`docker compose up -d --build`，宿主机 8001 → 容器 8000
+
+#### 🧾 智能称重台综合项目（智能称重台demo）⭐ 结课项目
+
+**闭环**：摄像头/视频 → YOLO 检测包装 → 按大类 ResNet18 提取 512 维特征 → 特征库检索 → 开放集判定 → MySQL 查价 → 25 帧稳定窗口 → PySide6 购物车结算
+
+- **YOLOv8n 检测**：4 类包装（`bag`/`bottle`/`box`/`cylinder`）→ **Precision 0.9946 / Recall 0.9868 / mAP50 0.9892 / mAP50-95 0.7883**
+- **ResNet18 特征模型**：4 个（按包装大类），去掉分类头输出 **512 维 L2 归一化特征**，Top-1 99.59%~100%
+- **特征检索**：`score = 0.7×类中心 + 0.3×同类 Top5 均值`；开放集判定用 `sim / margin` 双阈值拦截未注册商品
+- **在线注册**：`register_from_video.py` 现场注册新商品，无需重训即可入库（阿萨姆奶茶注册后 24→25 SKU）
+- **商品库**：MySQL `smart_checkout.products`（初始 24 条）
+- **部署格式**：1 个 YOLO ONNX + 4 个 ResNet ONNX，CUDA 优先、CPU 自动回退
+- **桌面界面**：PySide6（摄像头/本地视频/暂停/结算/重置/注册入口）
+- **答辩验证**：注册前 7 件 ¥38.60 → 现场注册后 8 件 ¥41.60
 
 ---
 
