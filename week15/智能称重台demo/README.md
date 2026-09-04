@@ -19,18 +19,18 @@
 
 ## 2. 最终实现状态
 
-| 模块      | 当前状态                                         |
-| ------- | -------------------------------------------- |
-| YOLO 检测 | 4 类：`bag`、`bottle`、`box`、`cylinder`          |
-| SKU 识别  | 初始24个训练 SKU；现场注册阿萨姆后变为25个                  |
-| 特征模型    | 4 个 ResNet18，去掉分类头后输出 512 维特征                |
-| 特征检索    | NumPy 向量矩阵，`0.7 × 类中心 + 0.3 × 同类 Top5 均值`    |
-| 开放集判定   | 原24类使用 `0.80/0.15`；在线注册类使用高相似度 `0.95/0.01` |
+| 模块      | 当前状态                                           |
+| ------- | ---------------------------------------------- |
+| YOLO 检测 | 4 类：`bag`、`bottle`、`box`、`cylinder`            |
+| SKU 识别  | 初始24个训练 SKU；现场注册阿萨姆后变为25个                      |
+| 特征模型    | 4 个 ResNet18，去掉分类头后输出 512 维特征                  |
+| 特征检索    | NumPy 向量矩阵，`0.7 × 类中心 + 0.3 × 同类 Top5 均值`      |
+| 开放集判定   | 原24类使用 `0.80/0.15`；在线注册类使用高相似度 `0.95/0.01`     |
 | 商品数据库   | MySQL `smart_checkout.products`，演示初始24条、注册后25条 |
-| 部署格式    | 1 个 YOLO ONNX + 4 个 ResNet ONNX              |
-| 推理设备    | 优先 `CUDAExecutionProvider`，不可用时回退 CPU        |
-| 桌面界面    | PySide6/Qt，支持摄像头、本地视频、暂停、结算、重置和注册入口          |
-| 答辩验证    | 注册前7件、¥38.60；现场注册后同一视频8件、¥41.60             |
+| 部署格式    | 1 个 YOLO ONNX + 4 个 ResNet ONNX                |
+| 推理设备    | 优先 `CUDAExecutionProvider`，不可用时回退 CPU          |
+| 桌面界面    | PySide6/Qt，支持摄像头、本地视频、暂停、结算、重置和注册入口            |
+| 答辩验证    | 注册前7件、¥38.60；现场注册后同一视频8件、¥41.60                |
 
 训练结果摘要：
 
@@ -192,8 +192,8 @@ D:\project\step1\env\python.exe smart_checkout_qt\registration_smoke_test.py
 | 最小检测框                | 24 px |
 | similarity threshold | 0.80  |
 | margin threshold     | 0.15  |
-| 在线注册类 similarity | 0.95  |
-| 在线注册类 margin     | 0.01  |
+| 在线注册类 similarity     | 0.95  |
+| 在线注册类 margin         | 0.01  |
 | 稳定窗口                 | 25 帧  |
 
 原24类阈值保持冻结，不通过全局降阈值换取新商品命中。在线注册类必须先达到更高的 `0.95` 相似度，才允许使用较小类别间隔；动态类未通过时会退回原24类判定，避免影响橙汁等旧商品。
@@ -225,15 +225,15 @@ D:\project\step1\env\python.exe smart_checkout_qt\registration_smoke_test.py
 
 ### 8.3 特征库、开放集识别与在线注册
 
-| 文件                           | 作用                                                                       |
-| ---------------------------- | ------------------------------------------------------------------------ |
-| `build_feature_library.py`   | 从训练图片和4个 ResNet18 构建 embeddings、labels、centers、classes、metadata 和 stats。 |
-| `augment_feature_library.py` | 用某个已注册 SKU 的补充真实场景视频追加特征样本，不重训模型；星巴克域适配使用过该脚本。                           |
-| `calibrate_threshold.py`     | 结合注册商品验证图和未注册商品照片统计 Top1 相似度与类别间隔，辅助确定开放集阈值。                             |
-| `feature_library_updater.py` | Qt 注册后端：视频均匀抽样、清晰度过滤、感知哈希去重、多姿态原型、MySQL 与特征文件一致更新。             |
-| `register_from_video.py`     | 多姿态视频注册/诊断命令行入口；不带 `--apply` 只读分析，带 `--apply` 才写入并生成验证报告。              |
-| `prepare_registration_demo.py` | 录制前备份当前状态并恢复24-SKU初始基线；默认只读检查，带 `--reset` 才执行恢复。                    |
-| `register_goods.py`          | MySQL 商品的命令行增删改查工具；只改商品表，不自动补充视觉特征。                                      |
+| 文件                             | 作用                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| `build_feature_library.py`     | 从训练图片和4个 ResNet18 构建 embeddings、labels、centers、classes、metadata 和 stats。 |
+| `augment_feature_library.py`   | 用某个已注册 SKU 的补充真实场景视频追加特征样本，不重训模型；星巴克域适配使用过该脚本。                           |
+| `calibrate_threshold.py`       | 结合注册商品验证图和未注册商品照片统计 Top1 相似度与类别间隔，辅助确定开放集阈值。                             |
+| `feature_library_updater.py`   | Qt 注册后端：视频均匀抽样、清晰度过滤、感知哈希去重、多姿态原型、MySQL 与特征文件一致更新。                       |
+| `register_from_video.py`       | 多姿态视频注册/诊断命令行入口；不带 `--apply` 只读分析，带 `--apply` 才写入并生成验证报告。                |
+| `prepare_registration_demo.py` | 录制前备份当前状态并恢复24-SKU初始基线；默认只读检查，带 `--reset` 才执行恢复。                         |
+| `register_goods.py`            | MySQL 商品的命令行增删改查工具；只改商品表，不自动补充视觉特征。                                      |
 
 当前特征库不是 FAISS，而是 NumPy 数组加余弦相似度。24～25 SKU 规模下可直接加载到内存，后续规模扩大时再考虑 FAISS。
 
@@ -268,7 +268,7 @@ D:\project\step1\env\python.exe smart_checkout_qt\registration_smoke_test.py
 | `smoke_test.py`               | 离屏创建主窗口，检查关键控件存在且不会自动启动摄像头。                                    |
 | `engine_smoke_test.py`        | 读取固定验证视频的一帧，检查 ONNX、CUDA/CPU Provider、特征库和 MySQL 链路。           |
 | `annotation_boundary_test.py` | 验证检测框超出图像四个方向时仍可安全绘制，防止 Pillow 反向矩形异常。                         |
-| `registration_smoke_test.py`  | 抽取阿萨姆竖放/横放帧，验证跨组动态检索、立即计价及同帧重复框去重。                          |
+| `registration_smoke_test.py`  | 抽取阿萨姆竖放/横放帧，验证跨组动态检索、立即计价及同帧重复框去重。                             |
 | `pyproject.toml`              | Qt 工程元数据、Python版本和依赖声明。                                        |
 | `requirements.txt`            | Qt 运行依赖。                                                       |
 | `README.md`                   | Qt 子工程启动说明。                                                    |
@@ -308,22 +308,22 @@ D:\project\step1\env\python.exe smart_checkout_qt\registration_smoke_test.py
 
 ## 9. 主要输出文件
 
-| 路径                                                              | 内容                            |
-| --------------------------------------------------------------- | ----------------------------- |
-| `runs/detect/smart_checkout_yolov8n/weights/best.pt`            | 最佳 YOLO PT 权重                 |
-| `runs/classify/<group>_resnet18/best.pt`                        | 4个最佳 ResNet18 权重              |
-| `runs/features/<group>_*`                                       | 4个包装大类的特征库与元数据                |
-| `runs/onnx/yolov8n_det.onnx`                                    | YOLO ONNX 模型                  |
-| `runs/onnx/<group>_resnet18_feat.onnx`                          | 4个特征 ONNX 模型                  |
-| `runs/pipeline/final_verify/`                                   | 7件 ¥38.60 的最终端到端验证证据          |
+| 路径                                                              | 内容                             |
+| --------------------------------------------------------------- | ------------------------------ |
+| `runs/detect/smart_checkout_yolov8n/weights/best.pt`            | 最佳 YOLO PT 权重                  |
+| `runs/classify/<group>_resnet18/best.pt`                        | 4个最佳 ResNet18 权重               |
+| `runs/features/<group>_*`                                       | 4个包装大类的特征库与元数据                 |
+| `runs/onnx/yolov8n_det.onnx`                                    | YOLO ONNX 模型                   |
+| `runs/onnx/<group>_resnet18_feat.onnx`                          | 4个特征 ONNX 模型                   |
+| `runs/pipeline/final_verify/`                                   | 7件 ¥38.60 的最终端到端验证证据           |
 | `runs/pipeline/demo_stage1_unregistered/`                       | 当前24-SKU初始态复验：7件 ¥38.60，阿萨姆未计价 |
-| `runs/pipeline/asm_registered_verify_v2/`                       | 注册后独立视频：8件 ¥41.60，原7件无回归     |
-| `runs/pipeline/asm_new_video_verify_v2/`                        | 新拍视频：阿萨姆1件 ¥3.00，391/393帧稳定      |
-| `runs/registration/bottle07_20260828_final_verification.json`   | 在线注册抽样、原型与两组验证结果汇总           |
-| `runs/pipeline/starbucks_verify/`                               | 星巴克真实场景补充后的验证证据               |
-| `runs/pipeline/onnx_e2e/`、`onnx_gpu/`                           | ONNX 端到端与 GPU 加速验证（结果与 PT 一致） |
-| `runs/pipeline/camera_test/`、`camera_unknown2/`、`camera_final/` | 摄像头实测证据：已注册识别、未注册拒绝、0 件结算     |
-| `work/sku_cleanup_backups/20260827_220011/`                     | 删除两个临时测试 SKU 前的可恢复备份          |
+| `runs/pipeline/asm_registered_verify_v2/`                       | 注册后独立视频：8件 ¥41.60，原7件无回归       |
+| `runs/pipeline/asm_new_video_verify_v2/`                        | 新拍视频：阿萨姆1件 ¥3.00，391/393帧稳定    |
+| `runs/registration/bottle07_20260828_final_verification.json`   | 在线注册抽样、原型与两组验证结果汇总             |
+| `runs/pipeline/starbucks_verify/`                               | 星巴克真实场景补充后的验证证据                |
+| `runs/pipeline/onnx_e2e/`、`onnx_gpu/`                           | ONNX 端到端与 GPU 加速验证（结果与 PT 一致）  |
+| `runs/pipeline/camera_test/`、`camera_unknown2/`、`camera_final/` | 摄像头实测证据：已注册识别、未注册拒绝、0 件结算      |
+| `work/sku_cleanup_backups/20260827_220011/`                     | 删除两个临时测试 SKU 前的可恢复备份           |
 
 ## 10. 答辩演示建议
 
