@@ -646,6 +646,7 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 
 ### Week 16 — 第三阶段 · 大模型与自然语言处理（09.01 - 09.04）
 
+> **本周安排**：09.01 - 09.02 智能称重台项目答辩（week15 项目收尾，未上新课时）；09.03 起正式进入大模型/NLP 课程。
 > 第三阶段（大模型/NLP）内容维护在 ZSXC 仓库的 `llm` 分支；本地运行环境为 `D:\project\step3\llm`（conda，不入库，依赖清单见 `week16/requirements-llm-env.txt`）。
 
 #### 9月3日 — FAISS 向量检索（0903.ipynb）
