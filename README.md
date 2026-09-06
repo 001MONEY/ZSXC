@@ -1,7 +1,7 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.08.28（14 周主课 + 智能称重台综合项目）；2026.09 起进入 **第三阶段 · 大模型/NLP**（维护于 `llm` 分支）  
+> **周期：** 2026.05.20 — 2026.08.28（14 周主课 + 智能称重台综合项目）；2026.09.01 起进入 **第三阶段 · 大模型/NLP**（维护于 `llm` 分支）  
 > **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → …）
 
 ---
@@ -25,7 +25,7 @@
 | **Week 13** | 08.10 - 08.16 | 动作识别 & 分割与 ONNX 部署 | 人体动作识别（YOLOv8-pose 关键点特征）、Br35H 脑肿瘤分割（YOLOv8-seg）、YOLO 系列 ONNX 部署推理、IoU 多目标跟踪 |
 | **Week 14** | 08.17 - 08.21 | 模型压缩 & TensorRT 部署 & 度量学习 | 模型剪枝/蒸馏/量化三件套、TensorRT FP16/INT8 引擎推理对比、CenterLoss/ArcFace 训练 MNIST 二维特征可视化 |
 | **Week 15** | 08.24 - 08.28 | FastAPI 服务 & 智能称重台项目 | FastAPI 入门与 RESTful、YOLOv8n ONNX Docker 推理服务、智能称重台综合项目（YOLO 检测 + ResNet18 特征检索 + MySQL + PySide6 结算） |
-| **Week 16** | 09.03 - 进行中 | 第三阶段 · 大模型与自然语言处理 | FAISS 向量检索（RAG 检索环节、索引类型）、语言为什么需要专门建模、中文分词与子词 Tokenizer、词向量与 Word2Vec（CBOW / Skip-gram） |
+| **Week 16** | 09.01 - 09.04 | 第三阶段 · 大模型与自然语言处理 | FAISS 向量检索（RAG 检索环节、索引类型）、语言为什么需要专门建模、中文分词与子词 Tokenizer、词向量与 Word2Vec（CBOW / Skip-gram） |
 ---
 
 ## 📂 项目结构
@@ -644,7 +644,7 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 
 ---
 
-### Week 16 — 第三阶段 · 大模型与自然语言处理（09.03 - 进行中）
+### Week 16 — 第三阶段 · 大模型与自然语言处理（09.01 - 09.04）
 
 > 第三阶段（大模型/NLP）内容维护在 ZSXC 仓库的 `llm` 分支；本地运行环境为 `D:\project\step3\llm`（conda，不入库，依赖清单见 `week16/requirements-llm-env.txt`）。
 
