@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.08.28（14 周主课 + 智能称重台综合项目）  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目
+> **周期：** 2026.05.20 — 2026.08.28（14 周主课 + 智能称重台综合项目）；2026.09.01 起进入 **第三阶段 · 大模型/NLP**（维护于 `llm` 分支）  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → …）
 
 ---
 
@@ -25,6 +25,7 @@
 | **Week 13** | 08.10 - 08.16 | 动作识别 & 分割与 ONNX 部署 | 人体动作识别（YOLOv8-pose 关键点特征）、Br35H 脑肿瘤分割（YOLOv8-seg）、YOLO 系列 ONNX 部署推理、IoU 多目标跟踪 |
 | **Week 14** | 08.17 - 08.21 | 模型压缩 & TensorRT 部署 & 度量学习 | 模型剪枝/蒸馏/量化三件套、TensorRT FP16/INT8 引擎推理对比、CenterLoss/ArcFace 训练 MNIST 二维特征可视化 |
 | **Week 15** | 08.24 - 08.28 | FastAPI 服务 & 智能称重台项目 | FastAPI 入门与 RESTful、YOLOv8n ONNX Docker 推理服务、智能称重台综合项目（YOLO 检测 + ResNet18 特征检索 + MySQL + PySide6 结算） |
+| **Week 16** | 09.01 - 09.04 | 第三阶段 · 大模型与自然语言处理 | FAISS 向量检索（RAG 检索环节、索引类型）、语言为什么需要专门建模、中文分词与子词 Tokenizer、词向量与 Word2Vec（CBOW / Skip-gram） |
 ---
 
 ## 📂 项目结构
@@ -215,6 +216,15 @@ step1/
 │       ├── pipeline_demo.py / infer_video.py — 端到端流程与视频推理
 │       ├── 项目总结.md / MODEL_FREEZE.md / 智能称重台项目计划书.md — 项目文档
 │       └── 商品数据.xlsx             — 24 SKU 商品信息
+│
+├── week16/         # 第三阶段 · 大模型/NLP（llm 分支）
+│   ├── 0903.ipynb                  — FAISS 向量检索（RAG 检索环节、IndexFlatL2/IP、IVF、HNSW）
+│   ├── 0904.ipynb                  — 语言建模 → 分词(jieba/HMM) → 子词 Tokenizer(BPE) → 词向量 → Word2Vec(CBOW)
+│   ├── cbow_linear_train.py        — CBOW 训练脚本（Linear 作 Embedding + 交叉熵损失）
+│   ├── 第三阶段大模型NLP课程_课堂复习笔记.md — 课堂完整复习（HMM/Viterbi/子词/Word2Vec 公式与代码）
+│   ├── llm_env_README.md           — 第三阶段运行环境说明（D:\project\step3\llm）
+│   ├── requirements-llm-env.txt    — llm 环境依赖清单（pip freeze 导出，149 包）
+│   └── 20260904钱富森.pdf          — 当日 PDF 笔记（已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -631,3 +641,31 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 ```
 
 > 数据集、模型和视频体积较大，已被 `.gitignore` 排除；迁移项目时必须单独复制 `video/`、`runs/`、数据集和 MySQL 数据。
+
+---
+
+### Week 16 — 第三阶段 · 大模型与自然语言处理（09.01 - 09.04）
+
+> **本周安排**：09.01 - 09.02 智能称重台项目答辩（week15 项目收尾，未上新课时）；09.03 起正式进入大模型/NLP 课程。
+> 第三阶段（大模型/NLP）内容维护在 ZSXC 仓库的 `llm` 分支；本地运行环境为 `D:\project\step3\llm`（conda，不入库，依赖清单见 `week16/requirements-llm-env.txt`）。
+
+#### 9月3日 — FAISS 向量检索（0903.ipynb）
+
+- **FAISS**（Facebook AI Similarity Search）：高效相似向量检索库，是 RAG（检索增强生成）中常见的检索环节
+- 基本流程：原始数据 → Embedding 模型 → 向量 → 建立 FAISS 索引 → 输入查询向量 → 返回 Top-K 相似结果
+- **常见索引**：`IndexFlatL2`（精确搜索/欧氏距离）、`IndexFlatIP`（内积，向量 L2 归一化后等价余弦相似度）、`IndexIVFFlat`（先聚类后搜索，需训练）、`IndexHNSWFlat`（基于图的近似搜索，速度快召回高）
+- **最小示例**：1000×128 维向量建 `IndexFlatL2` + `index.search(q, k=5)` 返回下标与距离
+- 注意：FAISS 只管理向量与编号，原文需另用列表/字典/数据库保存
+
+#### 9月4日 — 语言建模 → 分词 → 词向量 → Word2Vec（0904.ipynb）
+
+- **课堂主线**：为什么语言需要专门建模 → 文本预处理 → 中文分词 → 子词 Tokenizer → 数字编码 → 词向量 → Word2Vec
+- **语言 vs 传统输入**：变长 + 有序 + 元素相关 + 离散符号，区别于 DNN 常见的定长/无序/连续输入
+- **中文分词三代**：词典匹配 → 统计序列标注（HMM 概率状态机 + Viterbi 最优路径）→ 子词 Tokenizer（BPE / WordPiece / Unigram）
+- **词表**：token ↔ ID 双向映射，含 `<pad>`（占位）/ `<unk>`（词表外）特殊 token
+- **工程工具**：jieba 分词（精确/全/搜索引擎模式、自定义词典、关键词提取）与 Hugging Face tokenizers
+- **词向量**：One-Hot → Embedding 连续向量；余弦相似度；分布假设（上下文相似的词语义相近）
+- **Word2Vec**：CBOW（上下文 → 中心词）与 Skip-gram（中心词 → 上下文）两种自监督任务
+- **CBOW 完整实现**（`cbow_linear_train.py`）：`nn.Linear` 作 Embedding → 多个上下文词向量取平均 → 输出层预测中心词 → CrossEntropyLoss + SGD；训练后词向量即第一层 `Linear.weight` 的列向量
+- **关键点**：经典 CBOW 隐藏层不加 ReLU（线性平均更利于学词向量）
+- 完整复习见 `第三阶段大模型NLP课程_课堂复习笔记.md`，环境说明见 `llm_env_README.md`
