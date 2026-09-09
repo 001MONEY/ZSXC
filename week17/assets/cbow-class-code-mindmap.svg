@@ -1,0 +1,187 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1120" viewBox="0 0 1800 1120" role="img" aria-labelledby="title desc">
+  <title id="title">CBOW课堂代码逻辑思维导图</title>
+  <desc id="desc">依据老师的dataset.py、model.py和train.py绘制，展示数据集制作、模型计算、训练循环和词向量保存四个分支。</desc>
+  <defs>
+    <linearGradient id="rootGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#315EF6"/>
+      <stop offset="1" stop-color="#7047EB"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#20304A" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#3B82F6"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#F59E0B"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#8B5CF6"/>
+    </marker>
+    <style>
+      .font { font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .title { font-size: 46px; font-weight: 700; fill: #101828; }
+      .subtitle { font-size: 22px; fill: #667085; }
+      .card-title { font-size: 27px; font-weight: 700; fill: #172033; }
+      .step-title { font-size: 20px; font-weight: 700; fill: #172033; }
+      .step-text { font-size: 18px; fill: #526071; }
+      .number { font-size: 17px; font-weight: 700; fill: #FFFFFF; text-anchor: middle; dominant-baseline: middle; }
+      .root-title { font-size: 36px; font-weight: 700; fill: #FFFFFF; text-anchor: middle; }
+      .root-sub { font-size: 21px; fill: #E8ECFF; text-anchor: middle; }
+      .flow { font-size: 18px; font-weight: 600; fill: #FFFFFF; text-anchor: middle; }
+      .tag { font-size: 17px; font-weight: 600; }
+      .note { font-size: 18px; fill: #344054; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1120" fill="#F5F7FB"/>
+  <circle cx="120" cy="88" r="52" fill="#E9EFFF"/>
+  <circle cx="1688" cy="1010" r="88" fill="#F0ECFF"/>
+  <circle cx="1720" cy="95" r="28" fill="#E8F8F2"/>
+
+  <g class="font">
+    <text class="title" x="70" y="72">CBOW 课堂代码逻辑思维导图</text>
+    <text class="subtitle" x="72" y="110">严格对应老师的 dataset.py、model.py、train.py：先造数据，再算模型，最后训练并导出词向量</text>
+
+    <!-- 四条主分支连接线 -->
+    <path d="M690 470 C590 430, 610 315, 565 315" fill="none" stroke="#3B82F6" stroke-width="5" stroke-linecap="round" marker-end="url(#arrowBlue)"/>
+    <path d="M1110 470 C1210 430, 1190 315, 1235 315" fill="none" stroke="#10B981" stroke-width="5" stroke-linecap="round" marker-end="url(#arrowGreen)"/>
+    <path d="M690 610 C590 650, 610 790, 565 790" fill="none" stroke="#F59E0B" stroke-width="5" stroke-linecap="round" marker-end="url(#arrowOrange)"/>
+    <path d="M1110 610 C1210 650, 1190 790, 1235 790" fill="none" stroke="#8B5CF6" stroke-width="5" stroke-linecap="round" marker-end="url(#arrowPurple)"/>
+
+    <!-- 中心主题 -->
+    <g filter="url(#shadow)">
+      <rect x="650" y="395" width="500" height="230" rx="34" fill="url(#rootGradient)"/>
+    </g>
+    <rect x="740" y="430" width="320" height="34" rx="17" fill="#FFFFFF" fill-opacity="0.16"/>
+    <text class="root-sub" x="900" y="454">老师课堂代码主线</text>
+    <text class="root-title" x="900" y="515">CBOW 词向量训练</text>
+    <text class="root-sub" x="900" y="554">用周围词预测中心词</text>
+    <text class="flow" x="900" y="594">语料 → Dataset → Model → Train → 词向量</text>
+
+    <!-- Dataset 卡片 -->
+    <g filter="url(#shadow)">
+      <rect x="70" y="155" width="500" height="325" rx="24" fill="#FFFFFF"/>
+    </g>
+    <rect x="70" y="155" width="10" height="325" rx="5" fill="#3B82F6"/>
+    <circle cx="118" cy="202" r="24" fill="#3B82F6"/>
+    <text class="number" x="118" y="202">1</text>
+    <text class="card-title" x="158" y="212">dataset.py：制作训练样本</text>
+
+    <circle cx="112" cy="257" r="15" fill="#DBEAFE"/>
+    <text x="112" y="263" text-anchor="middle" font-size="17" font-weight="700" fill="#2563EB">A</text>
+    <text class="step-title" x="142" y="255">加载与分词</text>
+    <text class="step-text" x="142" y="281">逐行读取 text.txt → jieba.lcut → yield sentence</text>
+
+    <circle cx="112" cy="326" r="15" fill="#DBEAFE"/>
+    <text x="112" y="332" text-anchor="middle" font-size="17" font-weight="700" fill="#2563EB">B</text>
+    <text class="step-title" x="142" y="324">建立词表</text>
+    <text class="step-text" x="142" y="350">Counter 词频 → min_freq → PAD → 双向索引</text>
+
+    <circle cx="112" cy="395" r="15" fill="#DBEAFE"/>
+    <text x="112" y="401" text-anchor="middle" font-size="17" font-weight="700" fill="#2563EB">C</text>
+    <text class="step-title" x="142" y="393">构造上下文</text>
+    <text class="step-text" x="142" y="419">token ID → 两端补 PAD → 滑动窗口 → target</text>
+
+    <circle cx="112" cy="455" r="15" fill="#DBEAFE"/>
+    <text x="112" y="461" text-anchor="middle" font-size="17" font-weight="700" fill="#2563EB">D</text>
+    <text class="step-title" x="142" y="453">One-Hot 取样</text>
+    <text class="step-text" x="316" y="453">PAD 对应行清零</text>
+
+    <!-- Model 卡片 -->
+    <g filter="url(#shadow)">
+      <rect x="1230" y="155" width="500" height="325" rx="24" fill="#FFFFFF"/>
+    </g>
+    <rect x="1720" y="155" width="10" height="325" rx="5" fill="#10B981"/>
+    <circle cx="1278" cy="202" r="24" fill="#10B981"/>
+    <text class="number" x="1278" y="202">2</text>
+    <text class="card-title" x="1318" y="212">model.py：完成前向计算</text>
+
+    <circle cx="1272" cy="257" r="15" fill="#D1FAE5"/>
+    <text x="1272" y="263" text-anchor="middle" font-size="17" font-weight="700" fill="#059669">A</text>
+    <text class="step-title" x="1302" y="255">词向量映射</text>
+    <text class="step-text" x="1302" y="281">One-Hot → Linear(V, E)，bias=False</text>
+
+    <circle cx="1272" cy="326" r="15" fill="#D1FAE5"/>
+    <text x="1272" y="332" text-anchor="middle" font-size="17" font-weight="700" fill="#059669">B</text>
+    <text class="step-title" x="1302" y="324">上下文求和</text>
+    <text class="step-text" x="1302" y="350">embedding.sum(dim=1) → [N, embedding_dim]</text>
+
+    <circle cx="1272" cy="395" r="15" fill="#D1FAE5"/>
+    <text x="1272" y="401" text-anchor="middle" font-size="17" font-weight="700" fill="#059669">C</text>
+    <text class="step-title" x="1302" y="393">排除 PAD 求均值</text>
+    <text class="step-text" x="1302" y="419">embedding_sum ÷ no_pad_count → h</text>
+
+    <circle cx="1272" cy="455" r="15" fill="#D1FAE5"/>
+    <text x="1272" y="461" text-anchor="middle" font-size="17" font-weight="700" fill="#059669">D</text>
+    <text class="step-title" x="1302" y="453">预测中心词</text>
+    <text class="step-text" x="1453" y="453">out(h) → logits</text>
+
+    <!-- Train 卡片 -->
+    <g filter="url(#shadow)">
+      <rect x="70" y="640" width="500" height="325" rx="24" fill="#FFFFFF"/>
+    </g>
+    <rect x="70" y="640" width="10" height="325" rx="5" fill="#F59E0B"/>
+    <circle cx="118" cy="687" r="24" fill="#F59E0B"/>
+    <text class="number" x="118" y="687">3</text>
+    <text class="card-title" x="158" y="697">train.py：反向传播训练</text>
+
+    <circle cx="112" cy="742" r="15" fill="#FEF3C7"/>
+    <text x="112" y="748" text-anchor="middle" font-size="17" font-weight="700" fill="#D97706">A</text>
+    <text class="step-title" x="142" y="740">创建四类对象</text>
+    <text class="step-text" x="142" y="766">Dataset / DataLoader / Model / Loss + Adam</text>
+
+    <circle cx="112" cy="811" r="15" fill="#FEF3C7"/>
+    <text x="112" y="817" text-anchor="middle" font-size="17" font-weight="700" fill="#D97706">B</text>
+    <text class="step-title" x="142" y="809">前向与损失</text>
+    <text class="step-text" x="142" y="835">contexts → logits → CrossEntropyLoss</text>
+
+    <circle cx="112" cy="880" r="15" fill="#FEF3C7"/>
+    <text x="112" y="886" text-anchor="middle" font-size="17" font-weight="700" fill="#D97706">C</text>
+    <text class="step-title" x="142" y="878">BP 三步</text>
+    <text class="step-text" x="142" y="904">zero_grad → backward → optimizer.step</text>
+
+    <circle cx="112" cy="940" r="15" fill="#FEF3C7"/>
+    <text x="112" y="946" text-anchor="middle" font-size="17" font-weight="700" fill="#D97706">D</text>
+    <text class="step-title" x="142" y="938">一轮结束</text>
+    <text class="step-text" x="257" y="938">计算并打印 avg_loss</text>
+
+    <!-- 保存卡片 -->
+    <g filter="url(#shadow)">
+      <rect x="1230" y="640" width="500" height="325" rx="24" fill="#FFFFFF"/>
+    </g>
+    <rect x="1720" y="640" width="10" height="325" rx="5" fill="#8B5CF6"/>
+    <circle cx="1278" cy="687" r="24" fill="#8B5CF6"/>
+    <text class="number" x="1278" y="687">4</text>
+    <text class="card-title" x="1318" y="697">保存词向量：课后补全</text>
+
+    <circle cx="1272" cy="742" r="15" fill="#EDE9FE"/>
+    <text x="1272" y="748" text-anchor="middle" font-size="17" font-weight="700" fill="#7C3AED">A</text>
+    <text class="step-title" x="1302" y="740">选择最好结果</text>
+    <text class="step-text" x="1302" y="766">avg_loss &lt; init_loss 时执行保存</text>
+
+    <circle cx="1272" cy="811" r="15" fill="#EDE9FE"/>
+    <text x="1272" y="817" text-anchor="middle" font-size="17" font-weight="700" fill="#7C3AED">B</text>
+    <text class="step-title" x="1302" y="809">取出词向量</text>
+    <text class="step-text" x="1302" y="835">embedding.weight.T → [vocab_size, dim]</text>
+
+    <circle cx="1272" cy="880" r="15" fill="#EDE9FE"/>
+    <text x="1272" y="886" text-anchor="middle" font-size="17" font-weight="700" fill="#7C3AED">C</text>
+    <text class="step-title" x="1302" y="878">写文件头</text>
+    <text class="step-text" x="1302" y="904">word2vec.txt：词表大小 + 词向量维度</text>
+
+    <circle cx="1272" cy="940" r="15" fill="#EDE9FE"/>
+    <text x="1272" y="946" text-anchor="middle" font-size="17" font-weight="700" fill="#7C3AED">D</text>
+    <text class="step-title" x="1302" y="938">本次作业</text>
+    <text class="step-text" x="1418" y="938">逐行写 token + vector</text>
+
+    <!-- 底部主线 -->
+    <rect x="245" y="1015" width="1310" height="64" rx="18" fill="#E9EDFF"/>
+    <text class="note" x="900" y="1055" text-anchor="middle">
+      复现顺序：先让 Dataset 能打印样本 → 再检查 Model 张量形状 → 最后补 Train 和 word2vec.txt 保存
+    </text>
+  </g>
+</svg>
