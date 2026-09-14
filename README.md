@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.08.28（14 周主课 + 智能称重台综合项目）；2026.09.01 起进入 **第三阶段 · 大模型/NLP**（维护于 `llm` 分支）  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → …）
+> **周期：** 2026.05.20 — 2026.08.28（14 周主课 + 智能称重台综合项目）；2026.09.01 起进入 **第三阶段 · 大模型/NLP**（内容统一维护于 `main` 分支）  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现）
 
 ---
 
@@ -26,6 +26,7 @@
 | **Week 14** | 08.17 - 08.21 | 模型压缩 & TensorRT 部署 & 度量学习 | 模型剪枝/蒸馏/量化三件套、TensorRT FP16/INT8 引擎推理对比、CenterLoss/ArcFace 训练 MNIST 二维特征可视化 |
 | **Week 15** | 08.24 - 08.28 | FastAPI 服务 & 智能称重台项目 | FastAPI 入门与 RESTful、YOLOv8n ONNX Docker 推理服务、智能称重台综合项目（YOLO 检测 + ResNet18 特征检索 + MySQL + PySide6 结算） |
 | **Week 16** | 09.01 - 09.04 | 第三阶段 · 大模型与自然语言处理 | FAISS 向量检索（RAG 检索环节、索引类型）、语言为什么需要专门建模、中文分词与子词 Tokenizer、词向量与 Word2Vec（CBOW / Skip-gram） |
+| **Week 17** | 09.07 - 09.11 | 第三阶段 · 词向量实战与序列建模（RNN/LSTM） | CBOW 教学版/工程版实现与词向量验证、gensim Word2Vec 实战、RNN 数学推导与 BPTT、手写 RNN/LSTM 前向与梯度对照 PyTorch、梯度消失与梯度流实验 |
 ---
 
 ## 📂 项目结构
@@ -217,7 +218,7 @@ step1/
 │       ├── 项目总结.md / MODEL_FREEZE.md / 智能称重台项目计划书.md — 项目文档
 │       └── 商品数据.xlsx             — 24 SKU 商品信息
 │
-├── week16/         # 第三阶段 · 大模型/NLP（llm 分支）
+├── week16/         # 第三阶段 · 大模型/NLP
 │   ├── 0903.ipynb                  — FAISS 向量检索（RAG 检索环节、IndexFlatL2/IP、IVF、HNSW）
 │   ├── 0904.ipynb                  — 语言建模 → 分词(jieba/HMM) → 子词 Tokenizer(BPE) → 词向量 → Word2Vec(CBOW)
 │   ├── cbow_linear_train.py        — CBOW 训练脚本（Linear 作 Embedding + 交叉熵损失）
@@ -225,6 +226,21 @@ step1/
 │   ├── llm_env_README.md           — 第三阶段运行环境说明（D:\project\step3\llm）
 │   ├── requirements-llm-env.txt    — llm 环境依赖清单（pip freeze 导出，149 包）
 │   └── 20260904钱富森.pdf          — 当日 PDF 笔记（已 .gitignore）
+│
+├── week17/         # 第三阶段 · 词向量实战与序列建模（RNN/LSTM）
+│   ├── 0907.ipynb / 0907.html       — CBOW 全流程数学主线 + 词向量验证（余弦相似度 / PCA / 损失曲线）
+│   ├── 0909.ipynb / 0909.html       — nn.Embedding 查表与 PAD 掩码、gensim Word2Vec 实战、RNN 数学推导（因果性/BPTT/梯度消失）、手写 RNN 对照 Autograd
+│   ├── 0910.ipynb                   — LSTM 从原理到实践（门控前向、手写 BPTT、梯度流实验、多层/双向/PAD、文本分类）
+│   ├── CBOW教学版与工程版对比.md     — 教学版 vs 工程版完整对比 + 课堂代码逻辑思维导图（作业）
+│   ├── dataset.py / model.py / train.py              — CBOW 教学版（One-Hot 显式展开 + Masked Mean + 交叉熵）
+│   ├── dataset_prod.py / model_prod.py / train_prod.py — CBOW 工程版（IterableDataset + 负采样 + 检查点续训）
+│   ├── sentence.txt                 — 中文语料（20 句）
+│   ├── word2vec.txt                 — 教学版训练出的词向量（逐词写入）
+│   ├── gensim_cbow.model / word2vec_gensim.txt — gensim CBOW 模型与词向量文本
+│   ├── artifacts/                   — 工程版产物（vocab.json / word2vec.txt；best.pt、latest.pt 已 .gitignore）
+│   ├── assets/                      — CBOW 课堂代码脑图（png / svg）
+│   ├── cbow_best.pt                 — 教学版最优检查点（已 .gitignore）
+│   └── 20260907/09钱富森.pdf        — 当日 PDF 笔记（已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -575,7 +591,7 @@ step1/
 
 ---
 
-## � 智能称重台演示 demo
+## ⚖️ 智能称重台演示 demo
 
 `week15/智能称重台demo/` 是一个基于「目标检测 + 特征检索」的智能商品识别与结算原型系统。系统从摄像头或本地视频读取画面，完成「YOLO 检测包装 → 按大类 ResNet18 提取特征 → 特征库检索 → 开放集判定 → MySQL 查价 → 购物车结算」的完整闭环。
 
@@ -647,7 +663,7 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 ### Week 16 — 第三阶段 · 大模型与自然语言处理（09.01 - 09.04）
 
 > **本周安排**：09.01 - 09.02 智能称重台项目答辩（week15 项目收尾，未上新课时）；09.03 起正式进入大模型/NLP 课程。
-> 第三阶段（大模型/NLP）内容维护在 ZSXC 仓库的 `llm` 分支；本地运行环境为 `D:\project\step3\llm`（conda，不入库，依赖清单见 `week16/requirements-llm-env.txt`）。
+> 第三阶段（大模型/NLP）内容统一维护在 ZSXC 仓库 `main` 分支；本地运行环境为 `D:\project\step3\llm`（conda，不入库，依赖清单见 `week16/requirements-llm-env.txt`）。
 
 #### 9月3日 — FAISS 向量检索（0903.ipynb）
 
@@ -669,3 +685,29 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 - **CBOW 完整实现**（`cbow_linear_train.py`）：`nn.Linear` 作 Embedding → 多个上下文词向量取平均 → 输出层预测中心词 → CrossEntropyLoss + SGD；训练后词向量即第一层 `Linear.weight` 的列向量
 - **关键点**：经典 CBOW 隐藏层不加 ReLU（线性平均更利于学词向量）
 - 完整复习见 `第三阶段大模型NLP课程_课堂复习笔记.md`，环境说明见 `llm_env_README.md`
+
+### Week 17 — 第三阶段 · 词向量实战与序列建模（09.07 - 09.11）
+
+> **本周主线**：CBOW 从课堂代码到工程实现 → 词向量验证与 gensim 实战 → RNN 数学推导 / BPTT → LSTM 原理与手写实现，从「词向量」正式走向「序列建模」。
+
+#### 9月7日 — CBOW 训练全流程与词向量验证（0907.ipynb）
+
+- **CBOW 数学主线**：词频统计 → 词表编号 → 滑动窗口 → Padding/掩码 → One-Hot 查表 → 掩码平均 → 输出层 → Softmax/交叉熵 → 反向传播 → Adam，最后压缩成四个核心公式
+- **验证词向量到底学到了什么**：余弦相似度找近义词、PCA 降到二维观察聚类、训练损失曲线与最优检查点
+- **教学版 vs 工程版实现**：教学版（`dataset.py`/`model.py`/`train.py`）把 One-Hot 与全词表交叉熵显式展开，输出 `word2vec.txt` 与最优检查点 `cbow_best.pt`；工程版（`dataset_prod.py`/`model_prod.py`/`train_prod.py`）用 `IterableDataset` + 有界缓冲区打乱 + 负采样，输出 `vocab.json` / `latest.pt` / `best.pt` / `word2vec.txt`
+- 两版完整对照与课堂代码逻辑思维导图见 `CBOW教学版与工程版对比.md` 与 `assets/cbow-class-code-mindmap.png`
+
+#### 9月9日 — gensim Word2Vec 与 RNN 数学推导（0909.ipynb）
+
+- **`nn.Embedding` 查表**：Embedding 本质是 One-Hot × 矩阵的查表；`padding_idx=0` 让 PAD 位置不参与计算
+- **gensim 训练词向量**：jieba 分词 → `Word2Vec(sg=0)`（CBOW）→ `most_similar` / `similarity` 检索 → 保存 `gensim_cbow.model` 与 `word2vec_gensim.txt`（`KeyedVectors` 可直接加载查询）
+- **RNN 数学原理推导**：核心递推 → 时间展开 → 因果性（单向因果与双向 RNN 对照、与信号系统类比）→ 损失函数（many-to-many / many-to-one）→ BPTT 反向递推与参数梯度 → 梯度消失/爆炸的雅可比连乘根源 → 工程对策（梯度裁剪 / 门控 / 正交初始化 / 截断 BPTT）
+- **与 `nn.RNN` 对照**：`output` / `h_n` 维度约定、多层 Dropout、PAD 与最后有效状态
+- **手写单层 RNN**：按公式手写前向与 BPTT，梯度与 Autograd 逐项核对
+
+#### 9月10日 — LSTM 从原理到实践（0910.ipynb）
+
+- **门控公式与参数布局**：输入门/遗忘门/候选/输出门四组权重在 `nn.LSTM` 中按 i、f、g、o 顺序拼接
+- **手写 LSTM 前向与 BPTT**：与 `nn.LSTM` 前向、Autograd 梯度逐项核对（float64 机器精度级一致）
+- **梯度流实验**：RNN vs LSTM（含遗忘门偏置）在长序列上的梯度范数曲线对比，解释门控与加法路径对梯度消失的缓解
+- **长依赖任务训练**、多层/双向 LSTM 维度说明与 PAD 处理、`Embedding → 双向 LSTM → 分类` 文本分类器
