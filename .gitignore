@@ -18,6 +18,9 @@ ScreenShot_*.png
 # 训练输出结果（图片等）
 save_results/
 
+# TensorBoard 日志
+runs/
+
 # Checkpoint 目录
 checkpoints_little/
 checkpoints/
