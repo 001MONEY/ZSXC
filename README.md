@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.09.11  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现）
+> **周期：** 2026.05.20 — 2026.09.18  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译）
 
 ---
 
@@ -27,6 +27,7 @@
 | **Week 15** | 08.24 - 08.28 | FastAPI 服务 & 智能称重台项目 | FastAPI 入门与 RESTful、YOLOv8n ONNX Docker 推理服务、智能称重台综合项目（YOLO 检测 + ResNet18 特征检索 + MySQL + PySide6 结算） |
 | **Week 16** | 09.01 - 09.04 | 第三阶段 · 大模型与自然语言处理 | FAISS 向量检索（RAG 检索环节、索引类型）、语言为什么需要专门建模、中文分词与子词 Tokenizer、词向量与 Word2Vec（CBOW / Skip-gram） |
 | **Week 17** | 09.07 - 09.11 | 第三阶段 · 词向量实战与序列建模（RNN/LSTM） | CBOW 教学版/工程版实现与词向量验证、gensim Word2Vec 实战、RNN 数学推导与 BPTT、手写 RNN/LSTM 前向与梯度对照 PyTorch、梯度消失与梯度流实验 |
+| **Week 18** | 09.14 - 09.18 | 第三阶段 · Seq2Seq 中英翻译实战 | 基础 RNN Seq2Seq 作业版（词表/动态 Padding/教师强制/贪心解码）、课堂整合版（双层双向 GRU、正交初始化、TF 线性衰减、TensorBoard/BLEU 评估）、两版翻译质量对比与 Attention 动机 |
 ---
 
 ## 📂 项目结构
@@ -241,6 +242,17 @@ step1/
 │   ├── assets/                      — CBOW 课堂代码脑图（png / svg）
 │   ├── cbow_best.pt                 — 教学版最优检查点（已 .gitignore）
 │   └── 20260907/09钱富森.pdf        — 当日 PDF 笔记（已 .gitignore）
+│
+├── week18/         # 第三阶段 · Seq2Seq 中英翻译实战（RNN 编码器-解码器）
+│   ├── 0914.ipynb / 0914.html       — 作业总结：基础 RNN Seq2Seq 全流程（词表 / 动态 Padding / 教师强制 / 贪心解码与局限性）
+│   ├── 0918.ipynb / 0918.html       — 课堂总结：双层双向 GRU Seq2Seq 工程流程与评估边界（引出 Attention）
+│   ├── 0914/                        — 作业版代码（data_process/dataset/model/train/translate + 固化划分与 train-only 词表）
+│   ├── 0918/                        — 课堂整合版管线（config/data/model/utils/train/evaluate/predict + xx.py 等）
+│   │   ├── raw/                     — 语料与词表（cmn.txt / zh.json / en.json）
+│   │   ├── Seq2Seq中英翻译课堂版总结与对比.md — 两版对比与课堂总结
+│   │   └── weights/best.pt、runs/   — 训练产物（已 .gitignore）
+│   ├── teacher_ref/                 — 老师原始参考快照（保留已知问题，勿直接运行）
+│   └── 20260914/18钱富森.pdf        — 当日 PDF 笔记（已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -711,3 +723,32 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 - **手写 LSTM 前向与 BPTT**：与 `nn.LSTM` 前向、Autograd 梯度逐项核对（float64 机器精度级一致）
 - **梯度流实验**：RNN vs LSTM（含遗忘门偏置）在长序列上的梯度范数曲线对比，解释门控与加法路径对梯度消失的缓解
 - **长依赖任务训练**、多层/双向 LSTM 维度说明与 PAD 处理、`Embedding → 双向 LSTM → 分类` 文本分类器
+
+---
+
+### Week 18 — 第三阶段 · Seq2Seq 中英翻译实战（09.14 - 09.18）
+
+> **本周主线**：从 RNN/LSTM 走向序列到序列建模 —— 09.14 作业版跑通基础 Seq2Seq 全流程，09.18 课堂整合版升级为双层双向 GRU 并补全训练/评估工程，两版实测对比翻译质量，为下一课 Attention 做动机铺垫。
+
+#### 9月14日 — 基础 RNN Seq2Seq 作业版（0914.ipynb / 0914/）
+
+- **任务**：中英平行语料机器翻译（`raw/cmn.txt` 26,388 句对），从零实现 Encoder-Decoder 完整流程
+- **数据预处理**（`data_process.py`）：中文 zhconv 简体化 + jieba 分词，英文 Treebank 分词；定义 PAD/SOS/EOS/UNK 四个特殊 Token；仅用训练集构建词表，划分固化到 `train_val_split.json`
+- **Dataset 与动态 Padding**（`dataset.py`）：预编码 + 超长句过滤，`pad_sequence` 按 batch 动态补齐
+- **模型**（`model.py`）：单层单向 RNN Encoder/Decoder；Decoder 每步返回 `(logits, hidden)`，Encoder 末尾状态初始化 Decoder
+- **训练**（`train.py`）：交叉熵（忽略 PAD）+ 梯度裁剪 + 学习率调度，保存含模型配置的最优 checkpoint
+- **推理**（`translate.py`）：加载 checkpoint 单句交互式翻译（Treebank detokenizer）
+- **实测结论**：val CE 3.2554、验证集 BLEU 0.032；贪心输出「开头基本对、后半段跑偏」，连训练句也会翻错 —— 无 Attention 的信息瓶颈 + exposure bias 的直接证据
+- 详细总结见 `0914.ipynb` 与 `0914/Seq2Seq中英翻译作业总结.md`
+
+#### 9月18日 — 课堂整合版：双层双向 GRU Seq2Seq（0918.ipynb / 0918/）
+
+- **数据管线重构**（`data.py`）：`Vocabulary.build_vocab`（train-only）/ `encode` / `decode`，`collate_fn` 额外返回 `src_lengths`，`create_dataloaders` 统一返回词表与句对
+- **模型**（`model.py`）：2 层双向 GRU Encoder（`hidden[0::2]/[1::2]` 逐层拼接正反向）+ 2 层单向 GRU Decoder；`pack_padded_sequence` 真正跳过 PAD 时间步；显式校验 hidden 宽度
+- **训练工程**（`train.py` / `utils.py`）：正交 / xavier 初始化（PAD 行清零）、AdamW、梯度裁剪、Teacher Forcing 1.0 → 0.5 线性衰减、EarlyStopping(8)、TensorBoard 记录与每 5 轮贪心翻译示例
+- **评估**（`evaluate.py` / `predict.py`）：交互式翻译；全量验证集真实贪心解码 + NLTK 平滑 BLEU-4
+- **实测结果**：早停于 32 轮（约 11 分钟），best val 2.8050@24；验证集 BLEU-4 = 0.1297，约为作业版的 4 倍；10 句人工对照 4 句正确、3 句部分命中
+- **重要认知**：teacher-forcing 的 val CE 从 3.26 降到 2.81 只差 0.45 nats，BLEU 却差 4 倍 —— 验证 loss 不能反映自回归生成质量（暴露偏差会放大差异）
+- **评估边界**：展示样例不能当全局准确率；两版数据划分/模型配置不同，不能用两个 loss 数字换算提升百分比；词级词表 UNK 丢语义、贪心解码无回退等局限仍存在
+- 完整笔记见 `0918.ipynb`；两版对比与课堂结论见 `0918/Seq2Seq中英翻译课堂版总结与对比.md`
+- **下节课引出**：Attention —— Encoder 输出的各位置表示当前被丢弃，加入注意力后 Decoder 每一步可动态关注源句的相关位置
