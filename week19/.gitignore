@@ -5,3 +5,6 @@
 !*.py
 !*.ipynb
 !.gitignore
+
+# 第三方参考仓库（自带 .git，整目录排除，避免被主仓库当成嵌入式 gitlink）
+attention-is-all-you-need-pytorch/
