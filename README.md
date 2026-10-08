@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.09.18  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译）
+> **周期：** 2026.05.20 — 2026.09.27  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现）
 
 ---
 
@@ -28,6 +28,7 @@
 | **Week 16** | 09.01 - 09.04 | 第三阶段 · 大模型与自然语言处理 | FAISS 向量检索（RAG 检索环节、索引类型）、语言为什么需要专门建模、中文分词与子词 Tokenizer、词向量与 Word2Vec（CBOW / Skip-gram） |
 | **Week 17** | 09.07 - 09.11 | 第三阶段 · 词向量实战与序列建模（RNN/LSTM） | CBOW 教学版/工程版实现与词向量验证、gensim Word2Vec 实战、RNN 数学推导与 BPTT、手写 RNN/LSTM 前向与梯度对照 PyTorch、梯度消失与梯度流实验 |
 | **Week 18** | 09.14 - 09.18 | 第三阶段 · Seq2Seq 中英翻译实战 | 基础 RNN Seq2Seq 作业版（词表/动态 Padding/教师强制/贪心解码）、课堂整合版（双层双向 GRU、正交初始化、TF 线性衰减、TensorBoard/BLEU 评估）、两版翻译质量对比与 Attention 动机 |
+| **Week 19** | 09.21 - 09.27 | 第三阶段 · 注意力机制与 Transformer | Bahdanau 加性注意力 Seq2Seq 与乘性点积版统一配方公平重赛（BLEU 0.1526 vs 0.1746）、注意力热力图；论文复现仓库解读；从零手写 Transformer（缩放点积/多头注意力、位置编码、因果遮罩、整机自测）+ 作业版模型组装 |
 ---
 
 ## 📂 项目结构
@@ -253,6 +254,20 @@ step1/
 │   │   └── weights/best.pt、runs/   — 训练产物（已 .gitignore）
 │   ├── teacher_ref/                 — 老师原始参考快照（保留已知问题，勿直接运行）
 │   └── 20260914/18钱富森.pdf        — 当日 PDF 笔记（已 .gitignore）
+│
+├── week19/         # 第三阶段 · 注意力机制与 Transformer（Seq2Seq 注意力对照 + 手写 Transformer）
+│   ├── 0921.ipynb / 0921.html       — 注意力对照实验总结（v1/v2 公平重赛：0.1389→0.1526 vs 0.1307→0.1746、热力图解读、两版手写注意力代码）
+│   ├── 0924.ipynb / 0924.html       — Transformer 全流程通俗讲解（输入 → 注意力 → 编解码器 → 输出层 → 训练/推理 + 代码映射）
+│   ├── 0925.ipynb                   — 手写 Transformer 骨架（mask / 位置编码 / 缩放点积与多头注意力 / 编解码层 / 整机自测 / 数据接入，M1~M9）
+│   ├── 作业.ipynb / 作业.html        — 手写 Transformer 作业版（独立完成模型组装：遮罩、位置编码、注意力、编解码栈）
+│   ├── 0921/                        — 加性注意力版代码（config/data/model/utils/train/evaluate/predict + attention_visualize/_demo_translate）
+│   │   ├── raw/                     — 语料与词表（cmn.txt / zh.json / en.json）
+│   │   ├── Seq2Seq中英翻译课堂版总结与对比.md — 0918 课堂总结文档（拷入参照）
+│   │   └── attention_maps/、weights/、runs*/ — 热力图、权重与训练日志（已 .gitignore）
+│   ├── teacher0921/                 — 老师乘性（投影点积）注意力版实现（同结构管线 + 热力图脚本）
+│   │   └── attention_maps/、weights/、runs*/ — 热力图、权重与训练日志（已 .gitignore）
+│   ├── attention-is-all-you-need-pytorch/ — 第三方 Transformer 参考实现（独立 git 仓库，已 .gitignore）
+│   └── 20260921/24/25/27钱富森.pdf   — 当日 PDF 笔记（已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -752,3 +767,27 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 - **评估边界**：展示样例不能当全局准确率；两版数据划分/模型配置不同，不能用两个 loss 数字换算提升百分比；词级词表 UNK 丢语义、贪心解码无回退等局限仍存在
 - 完整笔记见 `0918.ipynb`；两版对比与课堂结论见 `0918/Seq2Seq中英翻译课堂版总结与对比.md`
 - **下节课引出**：Attention —— Encoder 输出的各位置表示当前被丢弃，加入注意力后 Decoder 每一步可动态关注源句的相关位置
+
+---
+
+### Week 19 — 第三阶段 · 注意力机制与 Transformer（09.21 - 09.27）
+
+> **本周主线**：先给 Seq2Seq 装上注意力 —— 09.21 实现 Bahdanau 加性注意力，并与老师乘性（投影点积）版按统一配方公平重赛；09.24/25 走向 Transformer：解读论文复现仓库、拆解全流程，从零手写完整实现（遮罩 / 位置编码 / 缩放点积与多头注意力 / 编解码层 / 整机自测），并完成作业版模型组装。
+
+#### 9月21日 — 注意力版 Seq2Seq：加性 vs 乘性公平对照（0921.ipynb / 0921/ / teacher0921/）
+
+- **两版实现**：`0921/` **加性（Bahdanau）** $e = v^\top \tanh(W_1 h_s + W_2 s_{t-1})$，在 GRU 之前用上一步状态查询；`teacher0921/` **乘性（投影点积）** $e = s_t^\top W_a h_s$，在 GRU 之后用当前状态查询；两版均带 PAD mask，新增 `attention_visualize.py` 逐词注意力热力图
+- **v1 初步结果**：加性版 BLEU-4 **0.1389**（无注意力基线 0.1297，+7.1%）；乘性版 CE 更低（2.7147）但 BLEU 0.1307 —— 条件预测能力与自由生成质量并不等价
+- **公平重赛 v2**：统一 batch 64 / 50 轮 / TF 1.0→0.5 / AdamW / ReduceLROnPlateau / 早停 10 后重训 —— 加性 **0.1526**（CE 2.7976）、乘性 **0.1746**（CE 2.7419），相对 v1 约 +10% / +34%；乘性版热力图对齐明显改善（Tom→汤姆 ≈1.00），但仍存在重复生成；结论限定为「该配方下乘性实现表现更好」（单 seed 对照，尚不能单独归因于打分公式）
+- 完整实验表格、v1/v2 热力图与两版手写注意力代码见 `0921.ipynb`
+
+#### 9月24日 — Transformer 全流程通俗讲解（0924.ipynb）
+
+- 9 节笔记讲清整条链路：标题 + ASCII 总流程 → ①② 输入（嵌入 ×√d + 正弦位置编码）→ ③ 注意力（QKV 检索类比、缩放点积、多头、mask）→ ④ 编码器 → ⑤⑥⑦ 解码器（掩码自注意力 + 交叉注意力）→ ⑧ 输出层（权重共享 + 标签平滑）→ 训练（teacher forcing）vs 推理（自回归 + beam search）→ 代码映射表（→ `attention-is-all-you-need-pytorch/`）→ 速查 Q&A
+- 与 0921 加性注意力、0925 手写骨架互相引用
+
+#### 9月25日 — 解读论文复现仓库 + 从零手写 Transformer（0925.ipynb / 作业.ipynb）
+
+- **参考仓库解读**：克隆并解读第三方复现 `attention-is-all-you-need-pytorch`（`transformer/` 包 7 模块 + preprocess/train/translate 入口），核对 post-LN、Noam 热启动调度、标签平滑 0.1、beam search 等实现细节与已知坑（如 `translate.py` 推理未传 `scale_emb_or_prj`）
+- **0925 手写骨架（M1~M9 完成，M10 待续）**：两种 mask（pad / 因果）→ 正弦位置编码 → 缩放点积注意力（`-inf` 遮位、返回 dropout 前权重）→ 多头注意力（拆头/拼头）→ FFN 与编解码层（post-norm）→ 整机拼装 + 因果性自测 → 复用 0921 数据管线接入数据；关键决策：遮位统一 `-inf`（fp16 安全的唯一通用选择）、`nn.LayerNorm(eps=1e-6)` 保持 post-norm
+- **作业.ipynb**：独立手写 Transformer 作业版 —— 完整实现遮罩、位置编码、缩放点积注意力、多头注意力、FFN、编解码层与 Encoder/Decoder/Transformer 组装（含长度/形状守卫），下一步接训练
