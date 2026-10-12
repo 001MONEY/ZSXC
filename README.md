@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.09.27  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现）
+> **周期：** 2026.05.20 — 2026.10.12  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现 → Hugging Face 生态与预训练模型部署（Transformers 全家桶 Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer、BERT 原理与微调任务、Qwen3.5-2B 多模态小模型本机部署））
 
 ---
 
@@ -29,6 +29,7 @@
 | **Week 17** | 09.07 - 09.11 | 第三阶段 · 词向量实战与序列建模（RNN/LSTM） | CBOW 教学版/工程版实现与词向量验证、gensim Word2Vec 实战、RNN 数学推导与 BPTT、手写 RNN/LSTM 前向与梯度对照 PyTorch、梯度消失与梯度流实验 |
 | **Week 18** | 09.14 - 09.18 | 第三阶段 · Seq2Seq 中英翻译实战 | 基础 RNN Seq2Seq 作业版（词表/动态 Padding/教师强制/贪心解码）、课堂整合版（双层双向 GRU、正交初始化、TF 线性衰减、TensorBoard/BLEU 评估）、两版翻译质量对比与 Attention 动机 |
 | **Week 19** | 09.21 - 09.27 | 第三阶段 · 注意力机制与 Transformer | Bahdanau 加性注意力 Seq2Seq 与乘性点积版统一配方公平重赛（BLEU 0.1526 vs 0.1746）、注意力热力图；论文复现仓库解读；从零手写 Transformer（缩放点积/多头注意力、位置编码、因果遮罩、整机自测）+ 作业版模型组装 |
+| **Week 20** | 10.08 - 10.12 | 第三阶段 · Hugging Face 与预训练模型 | Mask 机制复盘（Pad/Causal）与位置编码；Transformers 全家桶（Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer）；BERT 原理与微调任务（MLM/NSP）；Qwen3.5-2B 多模态小模型本机部署（6GB 显存适配、文本对话与图像理解） |
 ---
 
 ## 📂 项目结构
@@ -268,6 +269,16 @@ step1/
 │   │   └── attention_maps/、weights/、runs*/ — 热力图、权重与训练日志（已 .gitignore）
 │   ├── attention-is-all-you-need-pytorch/ — 第三方 Transformer 参考实现（独立 git 仓库，已 .gitignore）
 │   └── 20260921/24/25/27钱富森.pdf   — 当日 PDF 笔记（已 .gitignore）
+│
+├── week20/         # 第三阶段 · Hugging Face 生态与预训练模型部署
+│   ├── 1008.ipynb / 1008.html       — Pad Mask 与 Causal Mask 原理、Transformer 与位置编码复盘
+│   ├── huggingface基础.ipynb        — Transformers 全家桶：环境 → Tokenizer → Model → Pipeline → Datasets → Evaluate → Trainer
+│   ├── BERT训练与任务总结.md        — BERT 原理（MLM/NSP）、微调任务与生成式模型对比
+│   ├── 1010.ipynb                   — Qwen3.5-2B 本机部署实践（分词器 / 文本对话 / 图像理解 / @timer 计时）
+│   ├── .gitignore                   — 周目录忽略规则（本地模型与课堂资料不入库）
+│   ├── rbt3/                        — 中文 RoBERTa-wwm 三层小模型（文本分类实验，已 .gitignore）
+│   ├── Qwen3.5-2B/                  — 千问3.5 多模态小模型权重（已 .gitignore）
+│   └── hug-20261010/                — 课堂示例代码（下载/Tokenizer/生成/分类/Pipeline 五连，已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -791,3 +802,33 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 - **参考仓库解读**：克隆并解读第三方复现 `attention-is-all-you-need-pytorch`（`transformer/` 包 7 模块 + preprocess/train/translate 入口），核对 post-LN、Noam 热启动调度、标签平滑 0.1、beam search 等实现细节与已知坑（如 `translate.py` 推理未传 `scale_emb_or_prj`）
 - **0925 手写骨架（M1~M9 完成，M10 待续）**：两种 mask（pad / 因果）→ 正弦位置编码 → 缩放点积注意力（`-inf` 遮位、返回 dropout 前权重）→ 多头注意力（拆头/拼头）→ FFN 与编解码层（post-norm）→ 整机拼装 + 因果性自测 → 复用 0921 数据管线接入数据；关键决策：遮位统一 `-inf`（fp16 安全的唯一通用选择）、`nn.LayerNorm(eps=1e-6)` 保持 post-norm
 - **作业.ipynb**：独立手写 Transformer 作业版 —— 完整实现遮罩、位置编码、缩放点积注意力、多头注意力、FFN、编解码层与 Encoder/Decoder/Transformer 组装（含长度/形状守卫），下一步接训练
+
+---
+
+### Week 20 — 第三阶段 · Hugging Face 生态与预训练模型部署（10.08 - 10.12）
+
+> **本周主线**：从手写 Transformer 转向工业级工具链 —— 先用 Hugging Face `transformers` 全家桶走通「Tokenizer → Model → Pipeline → Datasets → Evaluate → Trainer」完整流程，补齐 BERT 原理与微调任务；再把预训练模型落到本机：Qwen3.5-2B 多模态小模型在 6GB 显卡上的部署实践。
+
+#### 10月8日 — Mask 机制复盘（1008.ipynb）
+
+- **Pad Mask 与 Causal Mask**：原理与作用 —— 补齐位置的屏蔽、因果遮罩防止未来信息泄漏
+- **Transformer 与位置编码**：正弦位置编码回顾与讨论，为使用预训练模型打基础
+
+#### 10月10日 — Transformers 全家桶与 BERT（huggingface基础.ipynb / BERT训练与任务总结.md）
+
+- **Tokenizer**：词表查看（vocab_size）、token ↔ id 索引转换、填充与截断、batch 批处理
+- **Model**：AutoModel 系列加载、修改输出维度、保存与加载、两种推理方式
+- **Pipeline**：创建与使用、GPU 推理加速、检测模型处理
+- **Datasets**：本地数据集加载、划分训练/测试集、filter/map 数据整理、`DataCollatorWithPadding`
+- **Evaluate**：评估函数加载、指标计算与多指标对比可视化
+- **Trainer**：微调流程、step 与梯度累积概念
+- **BERT 原理**：双向编码器、预训练双任务（MLM + NSP）、微调任务（换头即用）、与生成式模型对比
+- 文本分类任务实践（rbt3 中文 RoBERTa 小模型）
+
+#### 拓展实践 — Qwen3.5-2B 多模态小模型本机部署（1010.ipynb）
+
+- **模型**：Qwen3.5-2B —— 原生多模态小模型（视觉-语言早期融合，混合架构），bf16 权重 4.55GB
+- **6GB 显存适配**：`dtype="auto"` + `device_map="auto"`，全部层加载进 RTX 3060 Laptop
+- **完整链路**：分词器与处理器（Qwen3VLProcessor）→ 分词练习（byte-level BPE 原理）→ 文本对话（chat template + generate、思考模式开关）→ 图像理解（多模态推理）
+- **工程细节**：`@timer` 装饰器打印端到端推理耗时、本地环境 torch 2.10.0+cu128 / transformers 5.16.1
+- **周目录 .gitignore**：本地模型（Qwen3.5-2B、rbt3）与课堂资料统一排除，仓库保持轻量
