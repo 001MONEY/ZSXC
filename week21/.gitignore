@@ -6,3 +6,10 @@ nlpcc_2017/
 results_t5/
 t5_summary_best/
 nlpcc_2017.rar
+medical-o1-reasoning-SFT/
+results_lora/
+lora_adapter/
+lora_merged/
+lora-20261015/
+qlora/
+qlora_math/
