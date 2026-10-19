@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.10.12  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现 → Hugging Face 生态与预训练模型部署（Transformers 全家桶 Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer、BERT 原理与微调任务、Qwen3.5-2B 多模态小模型本机部署））
+> **周期：** 2026.05.20 — 2026.10.19  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现 → Hugging Face 生态与预训练模型部署（Transformers 全家桶 Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer、BERT 原理与微调任务、Qwen3.5-2B 多模态小模型本机部署）→ 大模型微调实战（rbt3 情感分类 → mengzi-T5 新闻标题生成全参微调 → LoRA 原理与 Qwen3.5-2B 医疗推理指令微调 → QLoRA Qwen3.5-9B 高等数学 SFT 四阶段实验））
 
 ---
 
@@ -29,7 +29,8 @@
 | **Week 17** | 09.07 - 09.11 | 第三阶段 · 词向量实战与序列建模（RNN/LSTM） | CBOW 教学版/工程版实现与词向量验证、gensim Word2Vec 实战、RNN 数学推导与 BPTT、手写 RNN/LSTM 前向与梯度对照 PyTorch、梯度消失与梯度流实验 |
 | **Week 18** | 09.14 - 09.18 | 第三阶段 · Seq2Seq 中英翻译实战 | 基础 RNN Seq2Seq 作业版（词表/动态 Padding/教师强制/贪心解码）、课堂整合版（双层双向 GRU、正交初始化、TF 线性衰减、TensorBoard/BLEU 评估）、两版翻译质量对比与 Attention 动机 |
 | **Week 19** | 09.21 - 09.27 | 第三阶段 · 注意力机制与 Transformer | Bahdanau 加性注意力 Seq2Seq 与乘性点积版统一配方公平重赛（BLEU 0.1526 vs 0.1746）、注意力热力图；论文复现仓库解读；从零手写 Transformer（缩放点积/多头注意力、位置编码、因果遮罩、整机自测）+ 作业版模型组装 |
-| **Week 20** | 10.08 - 10.12 | 第三阶段 · Hugging Face 与预训练模型 | Mask 机制复盘（Pad/Causal）与位置编码；Transformers 全家桶（Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer）；BERT 原理与微调任务（MLM/NSP）；Qwen3.5-2B 多模态小模型本机部署（6GB 显存适配、文本对话与图像理解） |
+| **Week 20** | 10.08 - 10.11 | 第三阶段 · Hugging Face 与预训练模型 | Mask 机制复盘（Pad/Causal）与位置编码；Transformers 全家桶（Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer）；BERT 原理与微调任务（MLM/NSP）；Qwen3.5-2B 多模态小模型本机部署（6GB 显存适配、文本对话与图像理解） |
+| **Week 21** | 10.12 - 10.19 | 第三阶段 · 大模型微调（全参 / LoRA / QLoRA） | rbt3 情感分类微调（Trainer 全流程）；mengzi-T5 新闻标题生成全参微调（Adafactor + bf16 + 梯度检查点，ROUGE-1 0.4223）；LoRA 原理与 Qwen3.5-2B 医疗推理指令微调（PEFT r8/α16/qkvo）；Qwen3.5-9B 高等数学 QLoRA 四阶段实验（冒烟/5k/20k/v3 + iso300/eval_v3 双基准） |
 ---
 
 ## 📂 项目结构
@@ -279,6 +280,26 @@ step1/
 │   ├── rbt3/                        — 中文 RoBERTa-wwm 三层小模型（文本分类实验，已 .gitignore）
 │   ├── Qwen3.5-2B/                  — 千问3.5 多模态小模型权重（已 .gitignore）
 │   └── hug-20261010/                — 课堂示例代码（下载/Tokenizer/生成/分类/Pipeline 五连，已 .gitignore）
+│
+├── week21/         # 第三阶段 · 大模型微调实战（全参 / LoRA / QLoRA）
+│   ├── 1012.ipynb                   — rbt3 中文 RoBERTa 情感分类微调（ChnSentiCorp，Trainer 全流程，F1 0.9174）
+│   ├── 1013.ipynb / 1013.html       — NLPCC2017 新闻标题生成：mengzi-T5 全参微调（Adafactor + bf16 + 梯度检查点，ROUGE-1 0.4223 / ROUGE-L 0.3688）
+│   ├── 1015.ipynb / 1015.html       — 医疗推理指令微调：Qwen3.5-2B + PEFT LoRA（r8/α16/qkvo，25 步，基座 vs 适配器对照）
+│   ├── 大模型微调.ipynb              — 微调理论：LoRA 低秩分解、B/A 初始化、目标层与秩选择、PEFT、梯度检查点
+│   ├── 模型微调.ipynb                — Qwen3.5-9B 高等数学 QLoRA 实验报告（冒烟/5k/20k/v3 四阶段 + iso300/eval_v3 双基准）
+│   ├── 模型微调_修改前备份_20261017.ipynb — 报告改写前备份（留档）
+│   ├── SFT_V3_REQUIREMENTS.md       — 高数 SFT 数据集 v3 构建要求（题型/难度/结构签名/校验字段）
+│   ├── ChnSentiCorp_htl_all.csv     — 情感分类数据集（7,766 条）
+│   ├── .gitignore                   — 周目录忽略规则（本地模型、训练产物与大数据集不入库）
+│   ├── rbt3/                        — 中文 RoBERTa-wwm 三层小模型（已 .gitignore）
+│   ├── nlpcc_2017/、nlpcc_2017.rar  — 新闻标题生成数据集（已 .gitignore）
+│   ├── results/                     — rbt3 情感分类训练产物（已 .gitignore）
+│   ├── results_t5/、t5_summary_best/ — T5 标题生成训练产物与最优权重（已 .gitignore）
+│   ├── medical-o1-reasoning-SFT/    — 医疗推理 SFT 数据（4 个 JSON，共 236MB，已 .gitignore）
+│   ├── lora-20261015/               — 课堂 LoRA 代码与预训练适配器（已 .gitignore）
+│   ├── results_lora/、lora_adapter/、lora_merged/ — 本地 LoRA 训练产物、适配器与合并模型（已 .gitignore）
+│   ├── qlora/                       — QLoRA 高数实验 v3 代码与产物（训练/推理/对照/失败分析，已 .gitignore）
+│   └── qlora_math/                  — QLoRA 5k/20k 阶段代码与产物（smoke/5k/20k/validate，已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -805,7 +826,7 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 
 ---
 
-### Week 20 — 第三阶段 · Hugging Face 生态与预训练模型部署（10.08 - 10.12）
+### Week 20 — 第三阶段 · Hugging Face 生态与预训练模型部署（10.08 - 10.11）
 
 > **本周主线**：从手写 Transformer 转向工业级工具链 —— 先用 Hugging Face `transformers` 全家桶走通「Tokenizer → Model → Pipeline → Datasets → Evaluate → Trainer」完整流程，补齐 BERT 原理与微调任务；再把预训练模型落到本机：Qwen3.5-2B 多模态小模型在 6GB 显卡上的部署实践。
 
@@ -832,3 +853,47 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 - **完整链路**：分词器与处理器（Qwen3VLProcessor）→ 分词练习（byte-level BPE 原理）→ 文本对话（chat template + generate、思考模式开关）→ 图像理解（多模态推理）
 - **工程细节**：`@timer` 装饰器打印端到端推理耗时、本地环境 torch 2.10.0+cu128 / transformers 5.16.1
 - **周目录 .gitignore**：本地模型（Qwen3.5-2B、rbt3）与课堂资料统一排除，仓库保持轻量
+
+---
+
+### Week 21 — 第三阶段 · 大模型微调实战：全参 / LoRA / QLoRA（10.12 - 10.19）
+
+> **本周主线**：从「会用预训练模型」走向「改造预训练模型」——先以 rbt3 情感分类跑通 Trainer 微调闭环，再用 mengzi-T5 完成新闻标题生成全参微调；随后学习 LoRA/PEFT 原理并在 Qwen3.5-2B 上完成医疗推理指令微调；最后在 Qwen3.5-9B 上用 4bit QLoRA 完成中文高等数学 SFT 的四阶段实验与双隔离集评测。
+
+#### 10月12日 — rbt3 中文情感分类微调（1012.ipynb）
+
+- **数据**：`ChnSentiCorp_htl_all.csv`（7,766 条酒店评论，`label,review`），过滤空文本后 7,765 条，`train_test_split(test_size=0.2, seed=42)` → 6,211 / 1,554
+- **模型**：本地 `rbt3/`（HFL 3 层 RoBERTa-wwm-ext）→ `AutoModelForSequenceClassification(num_labels=2)`；`cls.*` 未使用、`classifier` 随机初始化属正常
+- **流程**：tokenize（截断 128）→ `DataCollatorWithPadding` → `evaluate` 指标 → `TrainingArguments` → `Trainer` 训练/评估
+- **实测**：3 epochs（batch 64、lr 2e-5、`warmup_steps` 50、按 F1 选最优），acc **0.8874** / F1 **0.9174**，RTX 3060 Laptop 约 2 分钟；手写 predict 对 4 条新评论预测合理
+- **v5 API 适配**：`evaluation_strategy` → `eval_strategy`；`warmup_ratio` 已移除，改用 `warmup_steps`
+
+#### 10月13日 — NLPCC2017 新闻标题生成：mengzi-T5 全参微调（1013.ipynb / 1013.html）
+
+- **数据**：`nlpcc_2017/nlpcc_data.json`（50,000 条 title/content）；完全重复 6,271 条，去重后 43,729 → 划分 34,983 / 8,746（先去重再划分防泄漏）
+- **长度体检**：title 均值 44.6 字、max 128；content 均值 990 字、P95 2,781、max 22,312，62.8% 超 512 字必须截断
+- **模型**：`Langboat/mengzi-t5-base`（247.6M，T5ForConditionalGeneration）
+- **6GB 显存适配**：AdamW 全量微调峰值 11.4GB 并溢出共享内存（14s/步）；改 **Adafactor + gradient checkpointing + bf16 + batch 8 × accum 2** 后峰值 3.65GB、约 0.27s/样本
+- **训练**：5,000 条子集 × 3 epochs = 939 步 / 1:11:14；每轮 ROUGE-1 0.3776 → **0.4223** → 0.4223，第 2 轮最优（`load_best_model_at_end` 自动载回）
+- **最终指标**（1,000 条评估子集，字符级）：ROUGE-1 **0.4223** / ROUGE-2 **0.2673** / ROUGE-L **0.3688**
+- **问题与改进**：个别样本重复片段（解码问题）→ 可加 `no_repeat_ngram_size` / `repetition_penalty`；扩大训练集或轮数、全量 test 评估
+
+#### 10月15日 — LoRA 原理与 Qwen3.5-2B 医疗推理指令微调（大模型微调.ipynb / 1015.ipynb / 1015.html）
+
+- **理论**（`大模型微调.ipynb`）：全参微调的显存/存储痛点 → LoRA 低秩分解 $\Delta W = BA$、B 零初始化 / A 高斯初始化（保证初始 $\Delta W=0$）、低秩梯度更新 → 目标层与秩的选择 → HF PEFT、梯度检查点与优化器状态
+- **基座体检**：本地 `week20/Qwen3.5-2B`，1.882B 文本参数、24 层混合注意力（18 层线性 + 6 层全注意力，索引 3/7/11/15/19/23）；`target_modules=["self_attn.q_proj","k_proj","v_proj","o_proj"]` 仅挂 6 层全注意力
+- **模板对齐**：ChatML + 原生 `<think>` 脚手架；prompt 渲染须 `add_generation_prompt=True, enable_thinking=True` 才能与完整样本前缀逐 token 对齐（预处理阶段 160/160 断言通过）
+- **训练**：`medical-o1-reasoning-SFT` 中文版 `train[:200]`，8:2 划分 160/40；LoRA r=8、α=16、qkvo，batch 1 × accum 32（等效 32），5 epochs → 25 步，`warmup_steps=3`；因 eval batch 8 时 logits 上采 fp32 单块 6.35GB OOM，改 `per_device_eval_batch_size=1` + `PYTORCH_ALLOC_CONF=expandable_segments:True`
+- **结果**：25/25 步、24:51；train loss 2.370 → 2.237，eval 2.2877 → 2.2292 → **2.2258**（仍在下降）；可训参数 737,280（0.039%），adapter 2.82MB、合并模型 3.59GB
+- **推理对照**：微调版输出中文「先思考（`<think>`）后回答（### 分析步骤 + 总结）」格式，血压 160/100 判 2 级高血压正确；基座版输出全英文元思考并被 1024 token 截断 → **语言/格式切换 = 行为对齐的直接证据**
+- **工程收尾**：`del + gc.collect + empty_cache` 释放后 GPU 543MiB / 进程 RAM 0.73GB；文末「实验结果与分析」总结训练指标、参数效率、工程坑与推理效果
+
+#### 10月16日 - 10月19日 — Qwen3.5-9B 高数 QLoRA 四阶段实验（模型微调.ipynb / SFT_V3_REQUIREMENTS.md / qlora/ / qlora_math/）
+
+- **目标**：单卡 RTX 4090D（24GB）+ 4bit NF4 QLoRA 微调 `Qwen/Qwen3.5-9B`（9.65B）中文高等数学解题助手；输出协议为 `<think>` 推理 + `\boxed{}` 最终答案
+- **阶段 0-1 冒烟**：300 条 × 60 步，loss 1.32 → 0.008（3.8 分钟），峰值显存 8.49GiB，可训参数 43.3M（0.78%）；确认 assistant-only loss（63.1% token 参与训练）、EOS 在损失掩码内、3/3 未训样本格式合规且答案一致
+- **阶段 2 5k**：2 epochs / 626 步 / 20.5 分钟 / 峰值 8.50GiB / loss 1.246 → 0.0057；24 条未训样本：格式合规 0% → **100%**、答案一致 0% → **75%**
+- **阶段 3 20k**：同分布扩到 20k（约 4 倍）后，300 题隔离集 iso300 正确率仍为 **37.7%**（5k 也是 37.7%，逐题翻转 18→28）→ **数据量 ×4 零增益**；失败模式：难度 2 多为计算滑移、难度 3 为新结构方法错，9 类题型 0/10 ~ 11
+- **v3 定向增强**：`SFT_V3_REQUIREMENTS.md` 规定 18-22k 配比（存量复用 6-8k + 新结构 9-11k + 难度 3 多步题 4-5k），要求 `template_family` / `structure_signature` / `has_verification` 等元数据与分步验算示范
+- **v3 结果**：结构同源隔离集 eval_v3 由旧适配器 93%-94% → **100%**，但 iso300 回落到 **34.3%** → 定向数据强化目标分布的同时造成**能力重分配**；结论明确限定为「受控同源分布中的结构迁移」，不代表开放世界高数正确率
+- **代码**：`qlora/` 为 v3 版训练与评测脚本（train/infer/compare_v3/qa_v3/check_v3_composition 等），`qlora_math/` 为 5k/20k 阶段版本（含 smoke/5k/20k/validate/compare 产物）；两目录均含大体积 outputs，已 `.gitignore`
