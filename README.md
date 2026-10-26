@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.10.16  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现 → Hugging Face 生态与预训练模型部署（Transformers 全家桶 Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer、BERT 原理与微调任务、Qwen3.5-2B 多模态小模型本机部署）→ 大模型微调实战（rbt3 情感分类 → mengzi-T5 新闻标题生成全参微调 → LoRA 原理与 Qwen3.5-2B 医疗推理指令微调 → QLoRA Qwen3.5-9B 高等数学 SFT 四阶段实验））
+> **周期：** 2026.05.20 — 2026.10.23  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现 → Hugging Face 生态与预训练模型部署（Transformers 全家桶 Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer、BERT 原理与微调任务、Qwen3.5-2B 多模态小模型本机部署）→ 大模型微调实战（rbt3 情感分类 → mengzi-T5 新闻标题生成全参微调 → LoRA 原理与 Qwen3.5-2B 医疗推理指令微调 → QLoRA Qwen3.5-9B 高等数学 SFT 四阶段实验 → 大模型训练工程化（分布式训练 DP/PP/TP 与 DDP/DeepSpeed ZeRO → Ollama / EasyDataSet / LLaMA-Factory 本地工具链 → 低精度训练 int8/int4/NF4 量化））
 
 ---
 
@@ -31,6 +31,7 @@
 | **Week 19** | 09.21 - 09.27 | 第三阶段 · 注意力机制与 Transformer | Bahdanau 加性注意力 Seq2Seq 与乘性点积版统一配方公平重赛（BLEU 0.1526 vs 0.1746）、注意力热力图；论文复现仓库解读；从零手写 Transformer（缩放点积/多头注意力、位置编码、因果遮罩、整机自测）+ 作业版模型组装 |
 | **Week 20** | 10.08 - 10.11 | 第三阶段 · Hugging Face 与预训练模型 | Mask 机制复盘（Pad/Causal）与位置编码；Transformers 全家桶（Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer）；BERT 原理与微调任务（MLM/NSP）；Qwen3.5-2B 多模态小模型本机部署（6GB 显存适配、文本对话与图像理解） |
 | **Week 21** | 10.12 - 10.16 | 第三阶段 · 大模型微调（全参 / LoRA / QLoRA） | rbt3 情感分类微调（Trainer 全流程）；mengzi-T5 新闻标题生成全参微调（Adafactor + bf16 + 梯度检查点，ROUGE-1 0.4223）；LoRA 原理与 Qwen3.5-2B 医疗推理指令微调（PEFT r8/α16/qkvo）；Qwen3.5-9B 高等数学 QLoRA 四阶段实验（冒烟/5k/20k/v3 + iso300/eval_v3 双基准） |
+| **Week 22** | 10.19 - 10.23 | 第三阶段 · 分布式训练与低精度训练 | 微调动机与显存计算、LoRA 原理；分布式训练（DP/PP/TP/3D 并行、DDP 与 AllReduce、DeepSpeed ZeRO 配置与启动）；Ollama / EasyDataSet / LLaMA-Factory 本地工具链；int8/int4/NF4 量化与混合精度分解；Qwen3.5-9B 高数 QLoRA 实验报告 |
 ---
 
 ## 📂 项目结构
@@ -300,6 +301,14 @@ step1/
 │   ├── results_lora/、lora_adapter/、lora_merged/ — 本地 LoRA 训练产物、适配器与合并模型（已 .gitignore）
 │   ├── qlora/                       — QLoRA 高数实验 v3 代码与产物（训练/推理/对照/失败分析，已 .gitignore）
 │   └── qlora_math/                  — QLoRA 5k/20k 阶段代码与产物（smoke/5k/20k/validate，已 .gitignore）
+│
+├── week22/         # 第三阶段 · 分布式训练 / 本地工具链 / 低精度训练
+│   ├── 1019.ipynb / 1019.html       — 微调必要性与全参 vs 高效微调、LoRA 原理、显存需求计算、量化极值与 int8/int4 入门
+│   ├── 1021.ipynb                   — 分布式训练基础（DP/PP/TP/3D 并行、DDP、AllReduce）+ DDP/LoRA/DeepSpeed ZeRO 实践要点
+│   ├── 1022.ipynb                   — Ollama 本地部署、EasyDataSet 微调数据集构建、LLaMA-Factory 低代码训练与导出
+│   ├── 低精度训练.ipynb              — int8/int4 量化原理与代码（NF4 码本、双重量化、分页优化器、分位数量化演示）
+│   ├── qlora微调.ipynb               — Qwen3.5-9B 高等数学 QLoRA 微调实验报告（冒烟/5k/20k/v3 + iso300/eval_v3 双基准）
+│   └── 20261019钱富森.pdf            — 当日 PDF 笔记（已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -897,3 +906,55 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 - **v3 定向增强**：`SFT_V3_REQUIREMENTS.md` 规定 18-22k 配比（存量复用 6-8k + 新结构 9-11k + 难度 3 多步题 4-5k），要求 `template_family` / `structure_signature` / `has_verification` 等元数据与分步验算示范
 - **v3 结果**：结构同源隔离集 eval_v3 由旧适配器 93%-94% → **100%**，但 iso300 回落到 **34.3%** → 定向数据强化目标分布的同时造成**能力重分配**；结论明确限定为「受控同源分布中的结构迁移」，不代表开放世界高数正确率
 - **代码**：`qlora/` 为 v3 版训练与评测脚本（train/infer/compare_v3/qa_v3/check_v3_composition 等），`qlora_math/` 为 5k/20k 阶段版本（含 smoke/5k/20k/validate/compare 产物）；两目录均含大体积 outputs，已 `.gitignore`
+
+---
+
+### Week 22 — 第三阶段 · 分布式训练与低精度训练（10.19 - 10.23）
+
+> **本周主线**：从「单卡怎么微调」走向「怎么训得起、跑得动」——10.19 补齐全参 vs 高效微调的显存账本（LoRA 低秩分解、激活显存与梯度检查点、量化极值问题与混合精度分解）；10.21 进入分布式训练（DP/PP/TP/3D 并行、DDP 的梯度同步与进程—设备绑定、DeepSpeed ZeRO 分片与配置启动）；10.22 落地本地工具链（Ollama 部署与模型管理、EasyDataSet 构建微调数据集、LLaMA-Factory 低代码训练与导出）；同时整理低精度训练笔记与 Qwen3.5-9B 高数 QLoRA 实验报告。
+
+#### 10月19日 — 微调动机、显存计算与量化入门（1019.ipynb / 1019.html）
+
+- **为什么微调**：预训练模型只有通用续写能力，微调负责让模型按业务要求的对话格式与工作语言输出；同一模型可按需多次迭代微调（先基础对话，再垂直领域知识）
+- **全参 vs 高效微调**：全参训练全部参数、成本极高；高效微调只训影响最大的部分，通常集中在注意力 Q/K/V/O 权重矩阵
+- **LoRA 原理**：低秩分解把 512×512 权重拆成 $A_{512\times r}$ 与 $B_{r\times512}$ 只训练这两个小矩阵；B 初始化为全 0、A 取正态非零值（保证初始 $\Delta W = 0$），两者都置零则学不到东西
+- **显存账本**：总显存 =（参数 + 梯度 + 优化器 + 激活）× 安全系数（1.2~1.5）；7B 模型 FP16 全参即参数 14G + 梯度 14G + 优化器 56G，加激活至少 100G，乘系数约 120G（≈3×48G）
+- **LoRA 省显存的来源**：减少可训练参数量（r=1 时 512×512 只需 1024 个参数）→ 梯度与优化器状态骤降；激活显存靠梯度检查点（只留部分层激活，反向时重算）
+- **量化极值问题**：离群值拉长量化数轴，正常值被挤进 1~2 个区间而失去差异；**混合精度分解**把离群值单独抽出来保持 FP16、其余做 int8 再反量化，两路分别矩阵乘后合并回 FP16
+- **int8 / int4**：`load_in_8bit=True` 一行开启 int8；有符号 int4 只有 -8~7 共 16 个取值，为 NF4 / QLoRA 做铺垫
+
+#### 10月21日 — 分布式训练与 DDP / DeepSpeed（1021.ipynb）
+
+- **定义与动机**：把同一训练任务分配到多设备/多节点，突破单卡显存与算力限制，提高吞吐或支撑单卡放不下的大模型
+- **四种并行**：数据并行 DP（各卡完整模型 + 不同数据分片）、流水线并行 PP（按层切阶段、微批次流水）、张量并行 TP（层内权重按维切分 + 集合通信拼回）、3D 并行组合
+- **DDP 核心**：一卡一进程，各进程持完整模型副本、只处理自己的分片并独立前反向；反向期间用 NCCL 同步梯度，再各自执行相同更新；DDP 只做数据并行，可与 PP/TP 组合，也适合配 LoRA/QLoRA（底座冻结，只更新适配器）
+- **AllReduce**：环形 Reduce-Scatter + All-Gather 完成梯度求和/平均，通信量随参数量线性增长
+- **进程与 GPU 绑定**：容器内 GPU 编号可能与宿主机不同，必须读取 `LOCAL_RANK` 并 `torch.cuda.set_device(local_rank)`；QLoRA 一进程一卡时不要用 `device_map="auto"`，避免跨卡切分与 DDP 映射冲突
+- **训练参数要点**：`remove_unused_columns=True` 只删模型不需要的字段、不丢尾批（要丢用 `dataloader_drop_last=True`）；梯度检查点配 `gradient_checkpointing_kwargs={"use_reentrant": False}`（非关闭检查点）；确认可训练参数都参与计算时可设 `ddp_find_unused_parameters=False`
+- **DeepSpeed ZeRO**：ZeRO-1 分片优化器状态 → ZeRO-2 再分片梯度 → ZeRO-3 再分片参数；用 AllGather / ReduceScatter 换显存，本质是显存与通信/时间的权衡
+- **配置与启动**：ZeRO-3 分片加载需在 `from_pretrained()` 之前建好含 DeepSpeed 配置的 `TrainingArguments`（或提前持有 `HfDeepSpeedConfig`）；FP16/BF16 口径在模型加载、`TrainingArguments`、Accelerate YAML 与 DeepSpeed JSON 间保持一致；用 `accelerate launch --config_file ... 训练脚本.py` 启动；容器 `/dev/shm` 过小会导致 DataLoader/NCCL 失败
+- **GPU 租用**：配好环境后保存自定义镜像复用；课堂记录 AutoDL RTX 2080 Ti 12GB ≈1.86 元/小时、RTX 3090 ≈3.83 元/小时（价格随供需变化，租前复核）；空闲时降卡/关机省计费
+
+#### 10月22日 — 本地工具链：Ollama / EasyDataSet / LLaMA-Factory（1022.ipynb）
+
+- **Ollama**：Windows 桌面端直接启动（无需注册）；先改模型存储路径（默认 C 盘）并按显存调上下文长度；`ollama list` 看本地模型、`ollama ps` 看运行中模型与 CPU/GPU 占用、`ollama run 模型名` 存在即运行/不存在自动下载、`/bye` 退出；官网按 8G/16G/32G/64G 显存选模型，新手推荐 qwen3.5 4B
+- **EasyDataSet**：专做微调数据集的工具，支持单轮问答 / 多轮对话 / 图片问答，可解析 PDF、Markdown、TXT；Windows 直接装 exe（约 200MB，免注册）；生成模型可接阿里云百炼（qwen3.8 flash 有免费额度）或本地 Ollama（Ollama 需保持运行）；单轮流程：上传文档 → 自动切块（演示峨眉山讲解词切 41 块）→ 大模型清洗 + 手工/批量编辑 → 每块默认生成 4 个问题 → 导出 JSON、CSV、ChatGPT、LLaMA Factory 格式；多轮流程在任务设置里打开多轮、填系统提示词/场景/轮次（演示 5 轮）/角色，导出默认 ChatGPT 格式（更耗 token）
+- **LLaMA-Factory（笔记中亦写作 LavaFactory）**：低代码微调平台，优先 Linux；支持自行设置登录密码；需带 GPU 的服务器（推荐 A10，普通服务器驱动不支持）；离线压缩包解压后用 conda 建独立环境、`pip install -e .` 并配清华源（默认源安装可能数小时）；GUI 里配模型路径（ModelScope/HF 下载或本地）、LoRA 检查点与断点续训、4/8bit 量化、必选对话模板；自定义数据集放到 `data` 目录并在 `data/dataset_info.json` 注册；演示 Qwen2.5-1.5B 配 11G 显存 2080Ti，batch 2 × 3 轮跑通（不支持 bf16 也未报错）；**加载验证后必须先卸载模型释放显存再训练**；导出时要选对检查点，可分块与量化，产物含权重 / tokenizer / `chat_template.jinja`
+- **本周安排**：不布置新作业，复习 Docker / FastAPI / 异步与协程 / 面向对象 / 装饰器，并预习 Redis
+
+#### 拓展实践 — 低精度训练与 NF4 量化实现（低精度训练.ipynb）
+
+- **量化基础**：上溢/下溢与表示范围的关系；结合课堂文章与图示梳理 int8 / int4 量化的取舍
+- **int8 量化**：`load_in_8bit=True` 的加载方式，离群值处理依赖混合精度分解
+- **int4 与 NF4**：NF4（NormalFloat4）用固定 16 值码本，所有分组共享码本、每组只存 scale（对称形式），配合双重量化再压缩 per-group scale
+- **量化/反量化流程**：原始权重 → 标准化到 -1~1 → 映射到最近码本值 → 存 4-bit 索引 + scale；反量化查码本后反标准化，示例 2.3 → 2.5585（误差约 11%）
+- **代码演示**：pandas 构造原始数据，按分位数切出 4 个离散值完成分位数量化，直观看到极值对量化区间的影响
+- **优化手段**：双重量化与分页优化器（paged optimizer）进一步压低显存峰值
+
+#### 配套实验 — Qwen3.5-9B 高等数学 QLoRA 实验报告（qlora微调.ipynb）
+
+- **定位**：与 week21 `模型微调.ipynb` 同源的整理版报告，完整记录环境、数据、训练、适配器推理、双基准评测与失败分析
+- **环境**：transformers 5.20 / peft 0.21 / trl 1.15 / bitsandbytes 0.50 / flash-attn 2.8.3，单卡 RTX 4090D（24GB）4bit NF4 QLoRA
+- **训练**：5k 626 步 / 20.5 min、20k 2500 步 / 81.8 min、v3 2500 步 / 93.05 min，峰值显存 8.50~8.74 GiB，可训参数 43.3M（0.78%）
+- **评测结论**：iso300 上 5k 与 20k 同为 37.7%（113/300），同构数据 ×4 无增益；v3 在 eval_v3 上 93.3% → **100%**，iso300 回落到 **34.3%** —— 定向数据强化目标分布的同时带来能力重分配
+- **三点启发**：微调最擅长塑造行为（协议合规率 100%）≠ 保证答对；数据结构多样性比数量更重要；训练 loss（0.0051 / 0.0110）不能替代真实评测
