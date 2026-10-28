@@ -1,0 +1,26 @@
+# ---- uv / Python ----
+.venv/
+__pycache__/
+*.py[cod]
+.python-version.bak
+
+# ---- 环境变量 / 密钥 ----
+.env
+.env.*
+!.env.example
+
+# ---- 本地向量库 / 缓存 ----
+.chroma/
+*.sqlite3
+.langchain.db
+
+# ---- Notebook ----
+.ipynb_checkpoints/
+
+# ---- 编辑器 ----
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+
+deploy/

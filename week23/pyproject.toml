@@ -1,0 +1,20 @@
+[project]
+name = "langchain-learning"
+version = "0.1.0"
+description = "LangChain 学习环境（uv 管理）"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "fastapi>=0.162.0",
+    "ipykernel>=7.4.0",
+    "langchain>=1.4.7",
+    "langchain-chroma>=1.1.0",
+    "langchain-community>=0.4.2",
+    "langchain-ollama>=1.1.0",
+    "langchain-openai>=1.7.3",
+    "langchain-text-splitters>=1.1.3",
+    "python-dotenv>=1.2.4",
+]
+
+[[tool.uv.index]]
+url = "https://mirrors.cloud.tencent.com/pypi/simple"
+default = true
