@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.10.23  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现 → Hugging Face 生态与预训练模型部署（Transformers 全家桶 Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer、BERT 原理与微调任务、Qwen3.5-2B 多模态小模型本机部署）→ 大模型微调实战（rbt3 情感分类 → mengzi-T5 新闻标题生成全参微调 → LoRA 原理与 Qwen3.5-2B 医疗推理指令微调 → QLoRA Qwen3.5-9B 高等数学 SFT 四阶段实验 → 大模型训练工程化（分布式训练 DP/PP/TP 与 DDP/DeepSpeed ZeRO → Ollama / EasyDataSet / LLaMA-Factory 本地工具链 → 低精度训练 int8/int4/NF4 量化））
+> **周期：** 2026.05.20 — 2026.10.30  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现 → Hugging Face 生态与预训练模型部署（Transformers 全家桶 Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer、BERT 原理与微调任务、Qwen3.5-2B 多模态小模型本机部署）→ 大模型微调实战（rbt3 情感分类 → mengzi-T5 新闻标题生成全参微调 → LoRA 原理与 Qwen3.5-2B 医疗推理指令微调 → QLoRA Qwen3.5-9B 高等数学 SFT 四阶段实验 → 大模型训练工程化（分布式训练 DP/PP/TP 与 DDP/DeepSpeed ZeRO → Ollama / EasyDataSet / LLaMA-Factory 本地工具链 → 低精度训练 int8/int4/NF4 量化）→ **LangChain 应用开发**（OpenAI SDK 直连与 FastAPI 服务化 → Prompt 模板 / Few-shot / 语义选例 / LCEL / 输出解析 → 对话记忆与长度限制 + 摘要压缩作业））
 
 ---
 
@@ -32,6 +32,7 @@
 | **Week 20** | 10.08 - 10.11 | 第三阶段 · Hugging Face 与预训练模型 | Mask 机制复盘（Pad/Causal）与位置编码；Transformers 全家桶（Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer）；BERT 原理与微调任务（MLM/NSP）；Qwen3.5-2B 多模态小模型本机部署（6GB 显存适配、文本对话与图像理解） |
 | **Week 21** | 10.12 - 10.16 | 第三阶段 · 大模型微调（全参 / LoRA / QLoRA） | rbt3 情感分类微调（Trainer 全流程）；mengzi-T5 新闻标题生成全参微调（Adafactor + bf16 + 梯度检查点，ROUGE-1 0.4223）；LoRA 原理与 Qwen3.5-2B 医疗推理指令微调（PEFT r8/α16/qkvo）；Qwen3.5-9B 高等数学 QLoRA 四阶段实验（冒烟/5k/20k/v3 + iso300/eval_v3 双基准） |
 | **Week 22** | 10.19 - 10.23 | 第三阶段 · 分布式训练与低精度训练 | 微调动机与显存计算、LoRA 原理；分布式训练（DP/PP/TP/3D 并行、DDP 与 AllReduce、DeepSpeed ZeRO 配置与启动）；Ollama / EasyDataSet / LLaMA-Factory 本地工具链；int8/int4/NF4 量化与混合精度分解；Qwen3.5-9B 高数 QLoRA 实验报告 |
+| **Week 23** | 10.26 - 10.30 | 第三阶段 · LangChain 应用开发 | uv 环境与 OpenAI SDK 直连/流式、三种建模型方式、消息类型与多轮历史、FastAPI 服务化与请求解析；PromptTemplate/ChatPromptTemplate/MessagesPlaceholder、Few-shot 与语义选例、LCEL 管道、Json/Pydantic 输出解析、RunnableWithMessageHistory（内存/Redis）；作业：长度限制 + 摘要压缩多轮机器人 |
 ---
 
 ## 📂 项目结构
@@ -309,6 +310,20 @@ step1/
 │   ├── 低精度训练.ipynb              — int8/int4 量化原理与代码（NF4 码本、双重量化、分页优化器、分位数量化演示）
 │   ├── qlora微调.ipynb               — Qwen3.5-9B 高等数学 QLoRA 微调实验报告（冒烟/5k/20k/v3 + iso300/eval_v3 双基准）
 │   └── 20261019钱富森.pdf            — 当日 PDF 笔记（已 .gitignore）
+│
+├── week23/         # 第三阶段 · LangChain 应用开发（Prompt 工程 / LCEL / 对话记忆）
+│   ├── README.md                    — uv 环境搭建、内核注册、国内镜像与课堂代码本地化说明
+│   ├── 01_quickstart.ipynb          — 环境冒烟：版本检查 + 首个 LCEL 链
+│   ├── 20261027_langchain_basics_notes.ipynb — 从 OpenAI SDK 到 LangChain 服务化（9 节主线笔记）
+│   ├── 20261029_langchain_prompt_notes.ipynb — Prompt 工程与链式编排（8 节主线笔记）
+│   ├── homework_memory_chat.ipynb   — 作业：多轮对话机器人（Redis 存储 + 长度限制 + 摘要压缩）
+│   ├── homework_memory_chat.py      — 作业完整实现（存储/摘要/记忆/业务链/CLI/离线自测）
+│   ├── 20261027/                    — 课堂代码 01~09 + lab_config.py（Key 与局域网 IP 已收口到 .env）
+│   ├── 20261029/                    — 课堂练习 test1~test11 + memory_chat.py
+│   ├── deploy/                      — vLLM 部署笔记（kv_cache / pageAttention / Vllm.ipynb）
+│   ├── pyproject.toml / uv.lock     — uv 依赖声明与锁文件（langchain 1.4.7、langgraph 1.2.18、redis 等）
+│   ├── .env.example                 — 凭据模板（.env 已 .gitignore）
+│   └── .venv/                       — uv 虚拟环境 Python 3.11.9（已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -958,3 +973,40 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 - **训练**：5k 626 步 / 20.5 min、20k 2500 步 / 81.8 min、v3 2500 步 / 93.05 min，峰值显存 8.50~8.74 GiB，可训参数 43.3M（0.78%）
 - **评测结论**：iso300 上 5k 与 20k 同为 37.7%（113/300），同构数据 ×4 无增益；v3 在 eval_v3 上 93.3% → **100%**，iso300 回落到 **34.3%** —— 定向数据强化目标分布的同时带来能力重分配
 - **三点启发**：微调最擅长塑造行为（协议合规率 100%）≠ 保证答对；数据结构多样性比数量更重要；训练 loss（0.0051 / 0.0110）不能替代真实评测
+
+---
+
+### Week 23 — 第三阶段 · LangChain 应用开发（10.26 - 10.30）
+
+> **本周主线**：从「调模型」走向「编排模型」——先打通 OpenAI SDK 直连与流式（含 `reasoning_content` 思考链），再用三种方式创建 ChatModel、消息类型与多轮历史，最后把模型包装成 FastAPI 服务并补齐请求解析；随后进入 Prompt 工程：字符串/角色化模板、`MessagesPlaceholder`、Few-shot 与语义动态选例、LCEL 管道、Json/Pydantic 输出解析、`RunnableWithMessageHistory`（内存 + Redis）；作业实现带长度限制与摘要压缩的多轮对话机器人。环境用 `uv` 管理（`.venv` = Python 3.11.9，137 个包），内核 `Python 3.11 (week23 LangChain)`。
+
+#### 10月27日 — 从 OpenAI SDK 到 LangChain 服务化（20261027_langchain_basics_notes.ipynb / 20261027/）
+
+- **统一配置 `lab_config.py`**：课堂脚本里散落的 `sk-ws-*` Key 与老师机器局域网地址（Ollama `192.168.1.105:11434`）统一收口到 `week23/.env`；`LLM_PROVIDER` 切换 `qwen` / `openai` / `ollama`，`get_model()` 统一建模型；`QWEN_ENABLE_THINKING=false` 避免 reasoning token 吃光 `max_tokens`
+- **原生 SDK 流式**：`stream=True` 拿到生成器，`delta.reasoning_content` 是思考链、`delta.content` 是正文；除首个 chunk 外要跳过空 `choices`（usage 统计块）否则 `IndexError`；修正原脚本 `is_answering=True` 初始值写反的 bug（标题打印了但思考内容一段都不输出）
+- **三种建模型方式**：`ChatOpenAI`（任意 OpenAI 兼容云端，长度参数 `max_tokens`）/ `ChatOllama`（原生 `/api/chat`，长度参数叫 `num_predict`，`reasoning=False` 关思考）/ `init_chat_model`（provider 工厂，换服务只改配置）；三者统一 `.invoke()` 返回 `AIMessage`
+- **JSON 与消息**：模型只返回文本，稳定结构化靠 system 里的格式约束 + `json.loads(response.content)`；`SystemMessage` / `HumanMessage` / `AIMessage` / `ToolMessage` 与字典可混用
+- **多轮本质**：模型无状态，每轮把 `[system, user1, ai1, user2 …]` 全量重发；CLI 用空回车退出而非死循环
+- **服务化（06 / 07）**：`POST /chat` 主模型千问 + 重试 3 次 + 降级 DeepSeek + 全挂返回 502；修掉三个坑——`AIMessage.status_code` 不存在、无 `try/except` 导致备用模型永不触发、失败时返回 `{"ai_content": null}`；客户端 bug 是 `json=data` 用了全局变量，用户在 CLI 的输入根本没发出去 → `json={"messages": messages}`
+- **请求解析（08 / 09）**：query params / headers / body 三处数据的取值方式（钉钉待办接口实例）；日志中间件写 `request.state.request_id` 贯穿全链路，统一异常出口覆盖 400/401/422/500；两个必踩的坑——`return {"error": ...}, 400` 在 FastAPI 里仍返回 200（必须 `raise HTTPException`）、不注册 `StarletteHTTPException` 处理器则 404 与业务错误格式不一致
+
+#### 10月29日 — Prompt 工程与链式编排（20261029_langchain_prompt_notes.ipynb / 20261029/test1~test11.py）
+
+- **PromptTemplate**：`format()` 返回 `str`、`invoke()` 返回 `PromptValue`（可 `.to_messages()`）；`ChatPromptTemplate` 的 `format` / `format_prompt` / `format_messages` / `invoke` 四种取值方式与返回类型逐一对照
+- **MessagesPlaceholder**：给不定长的历史留槽位，是后面「记忆自动注入历史」的前提
+- **Few-shot 三种写法**：手写进 system（示例一多 prompt 就乱）/ `FewShotPromptTemplate`（prefix + example_prompt + suffix，输出 `str`）/ `FewShotChatMessagePromptTemplate`（示例本身就是 human-ai 消息对，可嵌进 `ChatPromptTemplate`，推荐）
+- **语义动态选例**：`SemanticSimilarityExampleSelector` + 向量库按 top-k 取示例；test5 是 embedding 选型实验（`qwen3-embedding:0.6b` vs `bge-large`），但指标算的是「问题 · 自己的答案」余弦相似度 → 实际衡量 **QA 语义对齐度**而非检索效果，且每个样例重复 6 次 `embed_query`，应先批量 embed 再算相似度矩阵
+- **LCEL**：`prompt | model` 管道；输出解析两条路——`JsonOutputParser` 给 `dict`（字段靠 prompt 约定，轻量）、`PydanticOutputParser` 给带类型校验的对象（`get_format_instructions()` 生成格式说明，用 `partial` 提前绑定，避免写死模板却漏声明 `input_variables`）
+- **对话记忆**：`get_session_history(session_id)` + `MessagesPlaceholder` + `RunnableWithMessageHistory` 三步，`config={"configurable": {"session_id": ...}}` 天然按会话隔离；换存储只换一个函数——`InMemoryChatMessageHistory`（重启即丢）/ `RedisChatMessageHistory`（多进程与重启不丢，链本身完全不用改）/ `SQLChatMessageHistory`
+- **踩坑清单**：Key 与局域网 IP 硬编码、test4 `load_model()` 的 `provider` 参数未真正使用、test1/test3 残留未使用 `model` 与注释代码等 9 条整理入笔记
+
+#### 作业 — 多轮对话机器人：长度限制 + 摘要压缩（homework_memory_chat.py / homework_memory_chat.ipynb）
+
+- **要求**：对话历史上限 20 轮（消息条目 ≤ 40 条）；超限时调用小参数模型对早期对话做摘要压缩，**替代直接截断**；优先用 Redis 存储历史
+- **四层设计**：业务层 `RunnableWithMessageHistory` → 记忆层 `SummarizingHistory`（判长度、触发压缩、拼出待送 messages）→ 摘要层小模型 `SUMMARY_MODEL` → 存储层 `RedisStore` / `MemoryStore`（共用 `load` / `save` / `delete` 接口）；`create_store()` 先 `ping()`，失败打警告并降级内存，没有 Redis 的机器也能跑通
+- **Redis 结构**：一个会话一个 key `chat:history:<session_id>`，存 `{"summary": ..., "messages": [...]}` 一份 JSON 文档，带 TTL（默认 7 天）避免无限增长
+- **长度口径**：1 轮 = human + ai = 2 条，第 21 轮时 42 > 40 触发压缩 → 存储降到 20 条 + 1 条 `SystemMessage` 摘要；之后每 10 轮再压一次（25 轮只调 1 次摘要模型），压缩是批量的而非每轮都调
+- **摘要提示词四条硬性要求**：保留用户事实信息（姓名/身份/偏好/约束）、保留已确认结论与未完成任务、省略寒暄与重复确认、第三人称直接给结论；每次把「已有摘要 + 新增对话」一起喂进去滚动更新（摘要滚雪球）；摘要失败退化为截取早期对话尾部 N 字兜底，保证主流程不中断
+- **摘要 vs 截断**：截断会彻底丢掉「我叫张三」这类关键事实，摘要以约 300 字上限保留下来继续参与推理，代价是**有损**（具体数字、代码片段可能被压掉）
+- **可调参数**（均可在 `.env` 覆盖）：`CHAT_MAX_TURNS=20`、`CHAT_KEEP_RECENT=20`（保留量≈上限一半）、`SUMMARY_MAX_CHARS=300`、`SUMMARY_MAX_TOKENS=400`、`SUMMARY_MODEL`、`REDIS_URL`、`CHAT_SESSION_TTL=604800`
+- **验收与延伸**：`python homework_memory_chat.py --demo` 离线自测（不花 token）验证长度限制与压缩日志；真实对话 Redis 可用即用、否则降级内存；`RunnableWithMessageHistory` 自 langchain 1.4 起标记 deprecated，官方推荐 LangGraph checkpointer，迁移只需替换业务层，`SummarizingHistory` 的「限制 + 摘要」逻辑可原样复用；下一步可把自然语言摘要改为结构化用户档案（姓名/目标/约束），更省 token
