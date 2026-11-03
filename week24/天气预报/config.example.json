@@ -1,0 +1,7 @@
+{
+  "api_host": "YOUR_API_HOST.qweatherapi.com",
+  "developer_id": "YOUR_DEVELOPER_ID",
+  "project_id": "YOUR_PROJECT_ID",
+  "credential_id": "YOUR_CREDENTIAL_ID",
+  "private_key_path": "keys/ed25519-private.pem"
+}

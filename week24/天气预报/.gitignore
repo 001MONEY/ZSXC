@@ -1,0 +1,4 @@
+config.json
+keys/
+weather_result.json
+__pycache__/
