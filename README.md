@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.10.30  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现 → Hugging Face 生态与预训练模型部署（Transformers 全家桶 Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer、BERT 原理与微调任务、Qwen3.5-2B 多模态小模型本机部署）→ 大模型微调实战（rbt3 情感分类 → mengzi-T5 新闻标题生成全参微调 → LoRA 原理与 Qwen3.5-2B 医疗推理指令微调 → QLoRA Qwen3.5-9B 高等数学 SFT 四阶段实验 → 大模型训练工程化（分布式训练 DP/PP/TP 与 DDP/DeepSpeed ZeRO → Ollama / EasyDataSet / LLaMA-Factory 本地工具链 → 低精度训练 int8/int4/NF4 量化）→ **LangChain 应用开发**（OpenAI SDK 直连与 FastAPI 服务化 → Prompt 模板 / Few-shot / 语义选例 / LCEL / 输出解析 → 对话记忆与长度限制 + 摘要压缩作业））
+> **周期：** 2026.05.20 — 2026.11.08  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现 → Hugging Face 生态与预训练模型部署（Transformers 全家桶 Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer、BERT 原理与微调任务、Qwen3.5-2B 多模态小模型本机部署）→ 大模型微调实战（rbt3 情感分类 → mengzi-T5 新闻标题生成全参微调 → LoRA 原理与 Qwen3.5-2B 医疗推理指令微调 → QLoRA Qwen3.5-9B 高等数学 SFT 四阶段实验 → 大模型训练工程化（分布式训练 DP/PP/TP 与 DDP/DeepSpeed ZeRO → Ollama / EasyDataSet / LLaMA-Factory 本地工具链 → 低精度训练 int8/int4/NF4 量化）→ **LangChain 应用开发**（OpenAI SDK 直连与 FastAPI 服务化 → Prompt 模板 / Few-shot / 语义选例 / LCEL / 输出解析 → 对话记忆与长度限制 + 摘要压缩作业）→ **LangChain 工具与 LangGraph 编排**（工具调用演进 → 图结构：状态/条件边/reducer/子图/Send/检查点 → 运行时设施：ToolNode/Store/Runtime·Context/流式/人工断点/时间旅行 → 实战：7 节点 SQL Agent））
 
 ---
 
@@ -33,6 +33,7 @@
 | **Week 21** | 10.12 - 10.16 | 第三阶段 · 大模型微调（全参 / LoRA / QLoRA） | rbt3 情感分类微调（Trainer 全流程）；mengzi-T5 新闻标题生成全参微调（Adafactor + bf16 + 梯度检查点，ROUGE-1 0.4223）；LoRA 原理与 Qwen3.5-2B 医疗推理指令微调（PEFT r8/α16/qkvo）；Qwen3.5-9B 高等数学 QLoRA 四阶段实验（冒烟/5k/20k/v3 + iso300/eval_v3 双基准） |
 | **Week 22** | 10.19 - 10.23 | 第三阶段 · 分布式训练与低精度训练 | 微调动机与显存计算、LoRA 原理；分布式训练（DP/PP/TP/3D 并行、DDP 与 AllReduce、DeepSpeed ZeRO 配置与启动）；Ollama / EasyDataSet / LLaMA-Factory 本地工具链；int8/int4/NF4 量化与混合精度分解；Qwen3.5-9B 高数 QLoRA 实验报告 |
 | **Week 23** | 10.26 - 10.30 | 第三阶段 · LangChain 应用开发 | uv 环境与 OpenAI SDK 直连/流式、三种建模型方式、消息类型与多轮历史、FastAPI 服务化与请求解析；PromptTemplate/ChatPromptTemplate/MessagesPlaceholder、Few-shot 与语义选例、LCEL 管道、Json/Pydantic 输出解析、RunnableWithMessageHistory（内存/Redis）；作业：长度限制 + 摘要压缩多轮机器人 |
+| **Week 24** | 11.02 - 11.08 | 第三阶段 · LangChain 工具与 LangGraph 编排 | 工具调用演进（手搓协议 → `bind_tools` → ReAct 循环 → AgentExecutor → `create_agent`）；LangGraph 图结构（State/条件边/reducer/子图/`Send`/检查点）；运行时设施（`ToolNode`/Store/Runtime·Context/`ToolRuntime`/`stream_mode`/`interrupt_before`/`interrupt`/时间旅行）；实战：7 节点 SQL Agent（只读账号 + sqlglot 白名单 + 重试回路）；作业：和风天气 JWT 工具 |
 ---
 
 ## 📂 项目结构
@@ -324,6 +325,18 @@ step1/
 │   ├── pyproject.toml / uv.lock     — uv 依赖声明与锁文件（langchain 1.4.7、langgraph 1.2.18、redis 等）
 │   ├── .env.example                 — 凭据模板（.env 已 .gitignore）
 │   └── .venv/                       — uv 虚拟环境 Python 3.11.9（已 .gitignore）
+│
+├── week24/         # 第三阶段 · LangChain 工具调用 → LangGraph 编排 → SQL Agent 实战
+│   ├── 20261102_工具调用.ipynb          — 工具调用演进串讲（手搓协议 → bind_tools → ReAct 循环 → AgentExecutor → create_agent）
+│   ├── 20261102/                       — 课堂代码 test1~test6（Pydantic 工具、@tool、args_schema、手写循环、AgentExecutor、create_agent）
+│   ├── 20261104_LangGraph.ipynb         — LangGraph 入门串讲（40 格：状态/边/reducer/子图/Send/检查点/压缩切点）
+│   ├── 20261104/                       — 课堂代码 test1~test9 + 天气助手.py + 消息压缩.py
+│   ├── 20261106_LangGraph进阶.ipynb      — 运行时设施串讲（50 格：ToolNode/Store/Runtime/ToolRuntime/stream_mode/断点/时间旅行）
+│   ├── 20261106/                       — 课堂代码 test1~test9
+│   ├── 20261108_LangGraph_SQL_Agent.ipynb — 实战项目串讲（7 节点 SQL Agent：SQL 校验、只读执行、重试回路）
+│   ├── langgraph-sql-agent/            — SQL Agent 项目（agent/db/verify/import_employees + compose.yaml，MySQL 8.4）
+│   ├── 天气预报/                        — 作业：和风天气 JWT 真实调用 + LangChain 工具封装（config/keys 已 .gitignore）
+│   └── employees.sql                   — MySQL 员工库导出（约 305 MB，已 .gitignore）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -1010,3 +1023,50 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 - **摘要 vs 截断**：截断会彻底丢掉「我叫张三」这类关键事实，摘要以约 300 字上限保留下来继续参与推理，代价是**有损**（具体数字、代码片段可能被压掉）
 - **可调参数**（均可在 `.env` 覆盖）：`CHAT_MAX_TURNS=20`、`CHAT_KEEP_RECENT=20`（保留量≈上限一半）、`SUMMARY_MAX_CHARS=300`、`SUMMARY_MAX_TOKENS=400`、`SUMMARY_MODEL`、`REDIS_URL`、`CHAT_SESSION_TTL=604800`
 - **验收与延伸**：`python homework_memory_chat.py --demo` 离线自测（不花 token）验证长度限制与压缩日志；真实对话 Redis 可用即用、否则降级内存；`RunnableWithMessageHistory` 自 langchain 1.4 起标记 deprecated，官方推荐 LangGraph checkpointer，迁移只需替换业务层，`SummarizingHistory` 的「限制 + 摘要」逻辑可原样复用；下一步可把自然语言摘要改为结构化用户档案（姓名/目标/约束），更省 token
+
+---
+
+### Week 24 — 第三阶段 · LangChain 工具调用与 LangGraph 编排（11.02 - 11.08）
+
+> **本周主线**：从「让模型调工具」走到「用图编排整条流程」——先手搓工具调用协议、再交给 `bind_tools` 与 AgentExecutor，然后拆开循环本身学 LangGraph（状态/边/reducer/子图/Send/检查点），接着补上运行时设施（ToolNode、Store、Runtime/Context、流式、人工断点、时间旅行），最后用一个 7 节点 SQL Agent 项目把「校验 + 只读执行 + 失败重试」串成可验收的工程。内核统一 `langchain-learning (3.11.9)`（跑在 `week23/.venv`），模型走 `week23/.env` 的 `lab_config.get_model()`。
+
+#### 11月2日 — 工具调用演进（20261102_工具调用.ipynb / 20261102/）
+
+- **五个台阶**：手搓 Pydantic `tool_call` 模型 + `PydanticOutputParser`（模型输出 `{tool_name, tool_args, output}`，手动 append 回填结果）→ `@tool` + `model.bind_tools()` 拿 `res.tool_calls` → 手写 ReAct 循环（`store` + `ToolMessage(tool_call_id=)`）→ `create_tool_calling_agent` + `AgentExecutor` + `RunnableWithMessageHistory` → `create_agent` + `MemorySaver` + `thread_id`
+- **`bind_tools` 的本质**：对比 ChatOpenAI 走 `/v1` 兼容接口与手写 OpenAI `TOOLS` function JSON，证明 `bind_tools` 只是把 Python 函数编译成同一份 JSON schema；`args_schema=Weather` 只是换 pydantic 描述参数
+- **换模型实测**：课堂用局域网 Ollama `qwen3.5:9b`（单次 10~60s），笔记改用千问 API（0.5~4s），JSON 遵循、`bind_tools`、AgentExecutor、`create_agent` 全部一次过
+- **9B 小模型上的三类失败**：手搓 `PydanticOutputParser` 时会「用人话描述工具调用」、`format="json"` 返回空内容、拿到工具结果仍重复调工具——说明协议约束要写进系统提示而不只靠格式说明
+- **踩坑**：`test4` 的 `if input == "exit"` 应比较 `input_text`（比较的是内置函数对象，永远不成立）；共享的 ChatOllama 若设了 `format="json"` 会影响后续 `bind_tools`，需用独立变量
+
+#### 11月4日 — LangGraph 入门：图结构（20261104_LangGraph.ipynb / 20261104/）
+
+- **最小图**：`StateGraph` + `TypedDict` State，节点只返回**部分状态**（只改 `foo`，`bar` 自动保留）；`TypedDict` 运行时不校验，边指向未知节点在 `compile()` 才报 `ValueError: Found edge ending at unknown node`
+- **路由**：`add_conditional_edges("node1", cond_edge, ["node2", "node3"])`，返回值决定下一跳；同一节点实测 `invoke(-10)` 走 `node2`、`invoke(10)` 走 `node3`
+- **reducer**：`Annotated[list, add]` 追加（`str` 原样、同 `id` 两条都留、`RemoveMessage` 变普通对象）vs `add_messages`（自动转 `HumanMessage`、同 `id` 覆盖、删除生效）；`MessagesState` 就是后者的预设
+- **结构扩展**：`RemoveMessage` 删消息；子图编译后当节点用（子图独有键**不写回**父图，`get_graph(xray=1)` 可看内部）；`Send` 扇出做 map-reduce（分支数由数据决定、顺序不保证）
+- **检查点**：`InMemorySaver` 每轮 3 个快照、`get_state_history` 看轨迹；`RedisSaver.from_conn_string` **必须 `setup()`** 建索引才可用
+- **实战修正**：天气助手（和风 GeoAPI + `@tool(args_schema=...)`）的 `args_schema` 字段名与形参名不一致 → `invoke` 报 `TypeError: unexpected keyword argument`；schema 字段传错 → pydantic `ValidationError` 且不发请求；消息压缩的 naive 切点会落在 `ToolMessage` 上，需后移到 human 边界（本例 6→8），找不到 human 则本轮不压
+
+#### 11月6日 — LangGraph 运行时设施（20261106_LangGraph进阶.ipynb / 20261106/）
+
+- **ToolNode**：模型只「申请调用」（`AIMessage.tool_calls`），节点才「真执行」并写回 `ToolMessage`；`test1` 在 `chat` 上同时挂条件边与 `add_edge("chat", END)` 属冗余写法（实测能跑通但语义含混，静态边与条件边应二选一）
+- **Store**：`InMemoryStore()` 默认 `index_config=None` → `search` 的 `score=None`、query 完全不生效（**不是**语义检索）；配 `index={"embed":…, "dims":n}` 才有向量排序，且只有 `limit`（默认 10）没有阈值；节点里靠**参数名** `store: BaseStore` 注入，忘记 `compile(store=…)` 编译不报错、用到才 `AttributeError: 'NoneType' object has no attribute 'put'`
+- **Runtime / ToolRuntime**：`@dataclass Context` + `invoke(..., context=Context(user_id=…))`，节点用 `Runtime[Context]`、工具用 `ToolRuntime[Context]`；不传 context → `runtime.context` 是 `None`；`ToolRuntime` 参数**不进模型 schema**（实测 `my_orders` 参数列表为空），所以「只能查自己的订单」必须写在这一层
+- **stream_mode**：`messages` 给 `(chunk, metadata)`（空 content 帧是工具调用指令，`ToolMessage` 整条出现）、`values` 每步给完整 state、`updates` 给各节点返回值；多模式复用返回 `(mode, payload)` 元组
+- **两类人工接管**：`interrupt_before=["tool_node"]` 停节点前（否决要 `update_state(as_node="tool_node")` 补一条 `ToolMessage`，否则下次调模型 400）；工具内 `interrupt(payload)` + `Command(resume=…)` 停在一行中间，**恢复时工具函数会重跑**（实测进入 2 次），副作用必须幂等
+- **时间旅行**：`get_state_history` 倒序快照（一次 chat→tool→chat 循环 5 个），`invoke(None, snapshot.config)` 原路重放 5→8，`update_state(snapshot.config, …)` 分叉 8→10，旧分支不删；`update_state` 返回的是 **config** 不是 state
+
+#### 11月8日 — 实战项目：LangGraph SQL Agent（20261108_LangGraph_SQL_Agent.ipynb / langgraph-sql-agent/）
+
+- **7 节点图**：`recognize_intent → search_schema → draft_sql → check_sql → execute_sql → check_result → answer`，`repair_or_finish()` 一条函数三处复用做重试（`attempt < max_attempts`，默认 3 次）
+- **六层防护**：独立只读账号（`connect()` 拒绝 root）→ `START TRANSACTION READ ONLY` → `MAX_EXECUTION_TIME=5000` + `fetchmany(51)` + 三个超时 → sqlglot 语法树白名单（单条 SELECT、禁 CTE/子查询/集合/`INTO`/变量/窗口）→ 表列与函数白名单 + `qualify()` 提前查未知列 → `result_error()` 校验列行结构与 count 语义（`COUNT(*) = 0` 合法）
+- **实测结果**：剧本模型与千问均返回 **195,057**（`hire_date >= '1988-01-01'`，含当天 96 人）；「按性别统计」→ M 179,973 / F 120,051；`verify.py` 全通过（UPDATE 报 1142、7 条对抗样例全拦、回路 `draft_sql×3 + execute×2`、重试耗尽停止）
+- **12 条对抗样例全部拦截**：多语句 / 写操作 / 跨库 `mysql.user` / `INTO OUTFILE` / 错误日期 / 注释截断 / 未知列 / `SLEEP()` / `DATEDIFF` / `IN (SELECT …)` / 窗口函数 / `UNION`
+- **读校验器要留意的细节**：`SLEEP` 报成 `不允许使用函数 ANONYMOUS`（sqlglot 归为 `exp.Anonymous`）；`INTO OUTFILE` 在 parse 阶段就 `ParseError`；`UNION` 被「只允许一条 SELECT」拦（`exp.Union` 不是 `exp.Select`）；`unknown_column` 由 `qualify()` 报 `OptimizeError`；`result_error` 对「两行/被截断/类型非 int」共用一句话，模型难定位
+- **可改进点**：白名单缺 `DATEDIFF`/`TIMESTAMPDIFF` 等常用函数；`exp.Between`、`exp.Not` 不是 `exp.Func` 子类（表里是死条目）；`search_schema` 兜底 `["employees"]` 会掩盖意图误分类；验收口径靠正则命中，换个说法即绕过；尚未接入 1106 的 `interrupt()` 与 Store 缓存
+
+#### 作业 — 和风天气 JWT 真实调用（天气预报/）
+
+- **目标**：输入经纬度与预报天数，用 Ed25519 私钥签发约 15 分钟有效的 JWT，向和风天气发 HTTPS GET，解析真实 JSON 并保存原始响应
+- **配置收口**：`config.json` 与 `keys/` 全部 `.gitignore`，仓库只留 `config.example.json`；`api_host` / `developer_id` / `project_id` / `credential_id` 四个值各不相同，API Key 不能当 Bearer token 用
+- **脚本分工**：`weather_tool.py keygen` 生成密钥对、查询与保存结果；`weather_langchain_tool.py` 把查询包装成 LangChain 工具，接入 11月2日的工具调用循环
