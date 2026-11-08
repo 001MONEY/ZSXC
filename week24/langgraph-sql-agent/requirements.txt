@@ -1,0 +1,8 @@
+langgraph==1.2.18
+langchain==1.4.7
+langchain-core==1.7.0
+langchain-openai==1.7.3
+pydantic==2.14.1
+PyMySQL[rsa]==1.2.3
+python-dotenv==1.2.4
+sqlglot==30.30.0

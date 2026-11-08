@@ -9,6 +9,9 @@ __pycache__/
 *.pt
 *.onnx
 
+# 数据库导出文件（约 305 MB，不入库；需要时从课堂原始文件重新导入）
+week24/employees.sql
+
 # YOLO 推理服务测试输出
 annotated_out.jpg
 
