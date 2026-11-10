@@ -61,6 +61,21 @@ else:
 
 MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1024"))
 
+# ---- 多模态（视觉）模型：百炼兼容模式 ----
+# .env 里可以只写 DASHSCOPE_API_KEY=${QWEN_API_KEY}，由 dotenv 展开；
+# 万一没展开成功（拿到的是字面量 ${...}），就直接复用对话模型的 key。
+_dash_key = (os.getenv("DASHSCOPE_API_KEY") or "").strip()
+DASHSCOPE_API_KEY = API_KEY if (not _dash_key or _dash_key.startswith("${")) else _dash_key
+DASHSCOPE_BASE_URL = (os.getenv("DASHSCOPE_BASE_URL") or BASE_URL).rstrip("/")
+VISION_MODEL = os.getenv("VISION_MODEL", "kimi-k3.1-pro")
+
+
+def get_vision_client(**kwargs):
+    """视觉模型用的 OpenAI 兼容客户端（图片走 image_url / data URL）。"""
+    from openai import OpenAI
+
+    return OpenAI(api_key=DASHSCOPE_API_KEY, base_url=DASHSCOPE_BASE_URL, **kwargs)
+
 # 千问的思考模式：开着会先消耗大量 reasoning token，
 # max_tokens 偏小时会出现「思考把额度花光、正文为空」（finish_reason=length）
 THINKING = (os.getenv("QWEN_ENABLE_THINKING") or "false").strip().lower() in {
@@ -112,6 +127,9 @@ def show_config() -> None:
     print(f"max_tokens = {MAX_TOKENS}")
     if PROVIDER == "qwen":
         print(f"thinking   = {THINKING}（true 会白烧 reasoning token）")
+    vkey = DASHSCOPE_API_KEY
+    vmasked = f"{vkey[:6]}***{vkey[-4:]}" if len(vkey) > 12 else "***"
+    print(f"vision     = {VISION_MODEL} @ {DASHSCOPE_BASE_URL}（key {vmasked}）")
 
 
 if __name__ == "__main__":

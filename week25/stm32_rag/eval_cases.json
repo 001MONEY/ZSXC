@@ -1,0 +1,85 @@
+{
+  "note": "锚点式评测集：anchors 里的短语必须能在检索结果的正文里原样找到（大小写、空白不敏感）。答案类的开放题不放进这里。",
+  "cases": [
+    {
+      "q": "GPIOx_CRL 的地址偏移和复位值分别是多少？",
+      "anchors": ["GPIOx_CRL", "0x4444 4444"]
+    },
+    {
+      "q": "How to configure a GPIO pin as analog input mode?",
+      "anchors": ["MODE[1:0]", "Analog mode"]
+    },
+    {
+      "q": "GPIO 端口输出数据寄存器 GPIOx_ODR 的复位值是多少？",
+      "anchors": ["GPIOx_ODR", "0x0000 0000"]
+    },
+    {
+      "q": "USART 的波特率寄存器叫什么，怎么设置波特率？",
+      "anchors": ["USART_BRR", "baud rate"]
+    },
+    {
+      "q": "RCC_APB2ENR 里哪一位控制 GPIOA 时钟使能？",
+      "anchors": ["RCC_APB2ENR", "IOPAEN"]
+    },
+    {
+      "q": "FLASH_ACR 的 latency 位怎么设置，等待周期取多少？",
+      "anchors": ["FLASH_ACR", "Latency"]
+    },
+    {
+      "q": "TIMx_CR1 有哪些控制位，CEN 位是做什么的？",
+      "anchors": ["TIMx_CR1", "CEN"]
+    },
+    {
+      "q": "ADC_CR2 里 SWSTART 位的作用是什么？",
+      "anchors": ["ADC_CR2", "SWSTART"]
+    },
+    {
+      "q": "SPI_CR1 寄存器的地址偏移是多少？",
+      "anchors": ["SPI_CR1", "0x00"]
+    },
+    {
+      "q": "I2C_CR2 寄存器的 FREQ 位怎么取值？",
+      "anchors": ["I2C_CR2", "FREQ"]
+    },
+    {
+      "q": "RTC_CRL 寄存器有哪些位可以读写？",
+      "anchors": ["RTC_CRL"]
+    },
+    {
+      "q": "DMA channel 的 CCR 寄存器里 EN 位和 MINC 位分别是什么含义？",
+      "anchors": ["DMA_CCRx", "MINC"]
+    },
+    {
+      "q": "RCC_CFGR 里 PLLMUL 和 HSEON 位分别有什么作用？",
+      "anchors": ["RCC_CFGR", "PLLMUL"]
+    },
+    {
+      "q": "定时器的自动重装载寄存器 TIMx_ARR 是什么作用？",
+      "anchors": ["TIMx_ARR"]
+    },
+    {
+      "q": "ADC 的规则序列寄存器怎么配置转换顺序？",
+      "anchors": ["ADC_SQR3", "SQR1"]
+    },
+    {
+      "q": "CAN 的位时序寄存器 CAN_BTR 里 BRP 位怎么设置？",
+      "anchors": ["CAN_BTR", "BRP"]
+    },
+    {
+      "q": "独立看门狗 IWDG_KR 寄存器写入什么键值可以启动看门狗？",
+      "anchors": ["IWDG_KR"]
+    },
+    {
+      "q": "启动时 BOOT0 和 BOOT1 引脚如何决定从 Flash、系统存储器还是 SRAM 启动？",
+      "anchors": ["BOOT0", "BOOT1"]
+    },
+    {
+      "q": "AFIO_MAPR 寄存器如何做外设引脚重映射？",
+      "anchors": ["AFIO_MAPR"]
+    },
+    {
+      "q": "外部中断屏蔽寄存器 EXTI_IMR 的作用是什么？",
+      "anchors": ["EXTI_IMR"]
+    }
+  ]
+}
