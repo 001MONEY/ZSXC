@@ -109,7 +109,9 @@ class Hit:
     def label(self) -> str:
         title = self.metadata.get("title", "")
         pages = self.metadata.get("pages", self.metadata.get("page", ""))
-        return f"{title}｜p.{pages}"
+        doc = self.metadata.get("doc", "")
+        prefix = f"[{doc}] " if doc else ""
+        return f"{prefix}{title}｜p.{pages}"
 
 
 @dataclass
@@ -170,6 +172,47 @@ class CorpusStore:
             by_section=dict(by_section),
         )
         return self._corpus
+
+
+def rerank_hits(llm, query: str, hits: list[Hit]) -> list[Hit]:
+    """LLM 打分重排：给每个候选 0~10 分。
+
+    两个稳定性细节：
+    - 候选摘要限 320 字符，14 个候选也不会超长导致输出被截断；
+    - 模型漏打分的候选记 None（不归零），排序时按原 RRF 顺序兜底。
+    """
+    if not hits:
+        return hits
+    order = {hit.id: i for i, hit in enumerate(hits)}
+    listing = []
+    for i, hit in enumerate(hits, start=1):
+        # 520 字符：代码块的块头（标题+文件+摘要）大约占 150~200 字符，
+        # 太短会把 Doxygen 摘要截掉，重排就只能看见函数名。
+        snippet = hit.text[:520].replace("\n", " ")
+        listing.append(f"[{i}] {hit.label}\n{snippet}")
+    prompt = (
+        "你是检索结果重排器。给每个候选片段对回答问题的有用程度打分，0-10 分。\n"
+        "候选个数必须与输入一致，每个都要打分，不要遗漏。\n"
+        "只输出 JSON，格式：{\"scores\": {\"1\": 8, \"2\": 3}}\n\n"
+        f"问题：{query}\n\n候选片段：\n" + "\n\n".join(listing)
+    )
+    try:
+        raw = llm.invoke(prompt).content
+    except Exception:
+        return hits
+    scores: dict[int, float] = {}
+    for key, value in re.findall(r'"(\d+)"\s*:\s*(\d+(?:\.\d+)?)', raw):
+        scores[int(key)] = float(value)
+    if not scores:
+        return hits
+    for i, hit in enumerate(hits, start=1):
+        hit.rerank_score = scores.get(i)
+
+    def sort_key(hit: Hit) -> tuple[float, int]:
+        score = hit.rerank_score
+        return (score if score is not None else -1.0, -order[hit.id])
+
+    return sorted(hits, key=sort_key, reverse=True)
 
 
 class HybridRetriever:
@@ -256,29 +299,7 @@ class HybridRetriever:
         return ranked
 
     def _rerank(self, query: str, hits: list[Hit]) -> list[Hit]:
-        if not hits:
-            return hits
-        listing = []
-        for i, hit in enumerate(hits, start=1):
-            snippet = hit.text[:700].replace("\n", " ")
-            listing.append(f"[{i}] {hit.label}\n{snippet}")
-        prompt = (
-            "你是检索结果重排器。判断每个候选片段对回答问题的有用程度，0-10 分。\n"
-            "只输出 JSON，格式：{\"scores\": {\"1\": 8, \"2\": 3}}\n\n"
-            f"问题：{query}\n\n候选片段：\n" + "\n\n".join(listing)
-        )
-        try:
-            raw = self.llm.invoke(prompt).content
-        except Exception:
-            return hits
-        scores: dict[int, float] = {}
-        for key, value in re.findall(r'"(\d+)"\s*:\s*(\d+(?:\.\d+)?)', raw):
-            scores[int(key)] = float(value)
-        if not scores:
-            return hits
-        for i, hit in enumerate(hits, start=1):
-            hit.rerank_score = scores.get(i, 0.0)
-        return sorted(hits, key=lambda h: (h.rerank_score if h.rerank_score is not None else 0.0), reverse=True)
+        return rerank_hits(self.llm, query, hits)
 
     def _expand(self, hits: list[Hit], budget_tokens: int) -> list[Hit]:
         """同一小节的相邻块补进来，避免答案正好被切在块边界上。"""
@@ -321,12 +342,12 @@ class HybridRetriever:
                 )
         return result
 
-    def search(self, query: str, cfg: RetrieveConfig | None = None) -> list[Hit]:
+    def recall(self, query: str, cfg: RetrieveConfig | None = None) -> list[Hit]:
+        """两路召回 + RRF 融合后的候选（不重排、不补邻居，供跨集合路由复用）。"""
         cfg = cfg or self.cfg
         self.ensure_ready()
 
         target = density_hint(query) if cfg.device_boost else ""
-
         vector_hits = self._vector_hits(query, cfg.vector_k)
         bm25_hits = self._bm25_hits(query, cfg.bm25_k)
         fused = self._rrf(vector_hits, bm25_hits)
@@ -336,6 +357,14 @@ class HybridRetriever:
         figures = named_figures(query)
         if figures:
             fused = self._prefer_named_figures(fused, figures)
+        return fused
+
+    def search(self, query: str, cfg: RetrieveConfig | None = None) -> list[Hit]:
+        cfg = cfg or self.cfg
+        target = density_hint(query) if cfg.device_boost else ""
+        figures = named_figures(query)
+
+        fused = self.recall(query, cfg)
 
         pool = fused[: cfg.rerank_pool]
         if cfg.use_rerank:

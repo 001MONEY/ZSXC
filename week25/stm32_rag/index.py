@@ -139,6 +139,28 @@ class Stm32Index:
                 f" -> {len(documents)} 个块（{time.time() - started:.1f}s）"
             )
 
+        result = self.add_documents(
+            documents, rebuild=rebuild, workers=workers, batch=batch, quiet=quiet
+        )
+        result["sections"] = len(sections)
+        result["figures"] = len(figures)
+        result["seconds"] = round(time.time() - started, 1)
+        return result
+
+    def add_documents(
+        self,
+        documents: list[Document],
+        *,
+        rebuild: bool = False,
+        workers: int = 4,
+        batch: int = 128,
+        quiet: bool = False,
+    ) -> dict:
+        """把已切好的 Document 列表写进集合（已存在的 id 自动跳过，可断点续跑）。"""
+        if not documents:
+            raise RuntimeError("待写入的块为空，未改动现有集合。")
+        started = time.time()
+
         # rebuild 先写进临时集合，写完再切换：中途失败不会把现有问答弄挂
         work_name = f"{self.name}__rebuild" if rebuild else self.name
         if rebuild:
@@ -157,7 +179,7 @@ class Stm32Index:
                 print(f"所有块已存在（{len(existing)} 条），跳过写入。")
             if rebuild:
                 self._swap(work_name)
-            return {"sections": len(sections), "chunks": len(documents), "added": 0, "skipped": len(documents)}
+            return {"chunks": len(documents), "added": 0, "skipped": len(documents)}
 
         if not quiet:
             print(f"待向量化 {len(todo)} 块（已存在 {len(existing)} 块），嵌入模型 {self.embeddings.model}")
@@ -180,7 +202,6 @@ class Stm32Index:
             self._swap(work_name)
 
         return {
-            "sections": len(sections),
             "chunks": len(documents),
             "added": len(todo),
             "skipped": len(documents) - len(todo),

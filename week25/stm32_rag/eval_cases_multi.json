@@ -1,0 +1,37 @@
+{
+  "note": "多语料锚点评测：同一份题库同时考察手册(RM)、数据手册(DS)、HAL 源码/例程。anchors 必须能在检索结果正文里原样找到（大小写、空白不敏感）。",
+  "cases": [
+    {
+      "q": "GPIO 输出高电平用哪个函数？",
+      "anchors": ["HAL_GPIO_WritePin", "GPIO_PIN_SET"]
+    },
+    {
+      "q": "GPIO 外部中断的回调函数叫什么名字？",
+      "anchors": ["HAL_GPIO_EXTI_Callback"]
+    },
+    {
+      "q": "GPIO_InitTypeDef 结构体包含哪些成员？",
+      "anchors": ["GPIO_InitTypeDef", "Pin"]
+    },
+    {
+      "q": "打开 GPIOA 时钟的宏是什么？",
+      "anchors": ["__HAL_RCC_GPIOA_CLK_ENABLE"]
+    },
+    {
+      "q": "RCC_APB2ENR 里哪一位控制 GPIOA 时钟？",
+      "anchors": ["RCC_APB2ENR", "IOPAEN"]
+    },
+    {
+      "q": "STM32F103C8T6 有多少个定时器？",
+      "anchors": ["advanced-control timer"]
+    },
+    {
+      "q": "STM32F103C8T6 的 Flash 容量是多少？",
+      "anchors": ["Flash", "Kbytes"]
+    },
+    {
+      "q": "ADC 轮询方式启动转换用哪个函数？",
+      "anchors": ["HAL_ADC_Start"]
+    }
+  ]
+}

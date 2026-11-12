@@ -33,9 +33,34 @@ except Exception:  # dotenv 没装也不能影响建库/检索
 PDF_PATH = Path(
     os.getenv(
         "STM32_PDF",
-        r"G:\BaiduNetdiskDownload\STM32入门教程资料\参考文档\STM32F10xxx参考手册（英文）.pdf",
+        # 优先用 week25 下的本地副本，没有时回退到网盘路径
+        str(PROJECT_DIR / "STM32F10xxx参考手册（英文）.pdf")
+        if (PROJECT_DIR / "STM32F10xxx参考手册（英文）.pdf").is_file()
+        else r"G:\BaiduNetdiskDownload\STM32入门教程资料\参考文档\STM32F10xxx参考手册（英文）.pdf",
     )
 ).expanduser()
+
+# ---------------------------------------------------------------- 多语料（HAL 全家桶）
+DOCS_DIR = Path(os.getenv("STM32_DOCS_DIR", str(PROJECT_DIR))).expanduser()
+DS_PDF_PATH = Path(
+    os.getenv("STM32_DS_PDF", str(DOCS_DIR / "STM32F103x8B数据手册（英文）.pdf"))
+).expanduser()
+UM_PDF_PATH = Path(
+    os.getenv(
+        "STM32_UM_PDF",
+        str(DOCS_DIR / "um1850-description-of-stm32f1-hal-and-lowlayer-drivers-stmicroelectronics.pdf"),
+    )
+).expanduser()
+HAL_ROOT = Path(os.getenv("STM32_HAL_ROOT", str(PROJECT_DIR / "vendor" / "STM32CubeF1"))).expanduser()
+HAL_DRIVER_DIR = HAL_ROOT / "Drivers" / "STM32F1xx_HAL_Driver"
+HAL_EXAMPLES_DIR = HAL_ROOT / "Projects" / "STM32F103RB-Nucleo" / "Examples"
+HAL_VERSION = os.getenv("STM32_HAL_VERSION", "v1.1.10")
+
+DS_COLLECTION = os.getenv("STM32_DS_COLLECTION", "stm32_ds_f103xb_text_embedding_v4")
+UM_COLLECTION = os.getenv("STM32_UM_COLLECTION", "stm32_um1850_v3_text_embedding_v4")
+HAL_COLLECTION = os.getenv("STM32_HAL_COLLECTION", "stm32f1_hal_v1110_text_embedding_v4")
+EXAMPLES_COLLECTION = os.getenv("STM32_EXAMPLES_COLLECTION", "stm32f1_hal_examples_text_embedding_v4")
+
 
 DB_DIR = Path(os.getenv("STM32_DB_DIR", str(PROJECT_DIR / "chroma_db"))).expanduser()
 FIGURES_DIR = DB_DIR / "figures"  # 插图 PNG 与 manifest.json
@@ -45,6 +70,15 @@ EMBED_MODEL = os.getenv("STM32_EMBED_MODEL", "text-embedding-v4")
 EMBED_DIM = int(os.getenv("STM32_EMBED_DIM", "1024"))
 EMBED_BATCH = int(os.getenv("STM32_EMBED_BATCH", "10"))  # 百炼单请求上限
 COLLECTION_NAME = os.getenv("STM32_COLLECTION", "stm32_rm0008_text_embedding_v4")
+
+# 来源 -> 集合名：CLI / 路由 / 多语料检索共用
+SOURCE_COLLECTIONS = {
+    "rm": COLLECTION_NAME,
+    "ds": DS_COLLECTION,
+    "um": UM_COLLECTION,
+    "hal": HAL_COLLECTION,
+    "examples": EXAMPLES_COLLECTION,
+}
 # 默认 4096：带图问答时容易撞到上限，留足余量
 ANSWER_MAX_TOKENS = int(os.getenv("STM32_ANSWER_MAX_TOKENS", "4096"))
 

@@ -12,6 +12,9 @@ chroma_db/
 blobs/
 mineru_out/
 
+# ===== 第三方源码（STM32Cube HAL/CMSIS，体积大，按需 sparse 检出）=====
+vendor/
+
 # ===== Milvus 本地数据卷（etcd / minio / milvus 运行数据，体积大且随时变化）=====
 milvus/volumes/
 

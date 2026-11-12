@@ -191,8 +191,14 @@ def _density(chapter: str) -> str:
     return ""
 
 
-def chunk_sections(sections: list[Section], cfg: BuildConfig | None = None) -> list[Document]:
+def chunk_sections(
+    sections: list[Section],
+    cfg: BuildConfig | None = None,
+    source_name: str | None = None,
+    doc: str = "RM0008",
+) -> list[Document]:
     cfg = cfg or BuildConfig()
+    source = source_name or PDF_PATH.name
     docs: list[Document] = []
 
     for item in _merge_short_sections(sections, cfg):
@@ -204,7 +210,9 @@ def chunk_sections(sections: list[Section], cfg: BuildConfig | None = None) -> l
             else:
                 body = piece
             metadata = {
-                "source": PDF_PATH.name,
+                "source": source,
+                "doc": doc,
+                "kind": "section",
                 "section_id": section.section_id,
                 "title": section.title,
                 "chapter": section.chapter,
@@ -232,8 +240,11 @@ def chunk_sections(sections: list[Section], cfg: BuildConfig | None = None) -> l
 
 
 def build_documents(
-    pdf_path=PDF_PATH, cfg: BuildConfig | None = None
+    pdf_path=PDF_PATH,
+    cfg: BuildConfig | None = None,
+    source_name: str | None = None,
+    doc: str = "RM0008",
 ) -> tuple[list[Section], list[Document]]:
     cfg = cfg or BuildConfig()
     sections = load_sections(pdf_path, cfg)
-    return sections, chunk_sections(sections, cfg)
+    return sections, chunk_sections(sections, cfg, source_name=source_name, doc=doc)

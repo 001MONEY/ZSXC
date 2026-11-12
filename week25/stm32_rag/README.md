@@ -142,3 +142,60 @@ for h in hits:
 3. **目录页与改版记录已跳过**：PDF 前 39 页是点线目录，第 32 章是 Revision history，都不建库。
 4. **嵌入维度固定**：集合用 1024 维建库，换 `STM32_EMBED_MODEL`/`STM32_EMBED_DIM` 必须换集合名重建。
 5. **答案里可能出现“资料中未给出该编码”**：这是故意的——宁可说没给，也不让模型推算位域编码。
+
+## 八、多语料：HAL 源码 / UM1850 / 数据手册
+
+`build` 与 `inspect` 都支持 `--source`，各来源写进独立集合：
+
+| 来源 | 内容 | 集合 | 命令 |
+| --- | --- | --- | --- |
+| `rm` | RM0008 参考手册（寄存器级） | `stm32_rm0008_text_embedding_v4` | `build --source rm --rebuild` |
+| `ds` | STM32F103x8/B 数据手册 | `stm32_ds_f103xb_text_embedding_v4` | `build --source ds` |
+| `um` | UM1850 HAL/LL 驱动说明书（1208 页，切出 **2591 块 / 60 章**） | `stm32_um1850_v3_text_embedding_v4` | `build --source um` |
+| `hal` | STM32F1xx HAL 驱动源码（`.c/.h`，889 函数 / 241 类型 / 1057 宏组） | `stm32f1_hal_v1110_text_embedding_v4` | `build --source hal` |
+| `examples` | Nucleo 例程 `main.c`（180 块） | `stm32f1_hal_examples_text_embedding_v4` | `build --source examples` |
+
+切法差异：
+
+- **源码**（`loader_hal.py`）：按语法单元切——函数 = 前置 Doxygen 注释 + 签名 + 函数体；结构体/枚举整块；连续 `#define` 按 380 token 预算合并成组。每块带 `symbol / module / file / lines / kind`，并补一行自然语言摘要（`GPIO 模块的函数 HAL_GPIO_Init：...`）帮助中文问题的稠密召回。
+- **UM1850**（`loader_um.py`）：先按书签切小节，再把 API 小节按 `符号 → Function name → 原型 → Parameters → Return values` 切成“一函数一块”，元数据带 `symbol / module / rev`。
+- **数据手册**：复用 RM0008 的书签 + 表格管线，只换版心参数（`skip_front_pages=1`、页脚 740），不抽插图（与 RM0008 共用图目录会撞 Figure 编号）。
+
+离线先看切块效果：
+
+```powershell
+python -m stm32_rag inspect --source hal --show 3
+python -m stm32_rag inspect --source um --pages 225-232 --show 3   # 只体检 GPIO 章
+python -m stm32_rag inspect --source ds --pages 55-70 --show 3
+```
+
+> 注意：各集合必须用同一嵌入模型（默认 `text-embedding-v4` / 1024 维）。
+
+### 跨集合检索（路由）
+
+`ask` / `eval` 默认 `--sources auto`，按问题特征选集合：
+
+| 问题特征 | 路由顺序 |
+| --- | --- |
+| 出现 `HAL_` / `LL_` 符号 | hal → um → examples |
+| 寄存器 / 位域 / 复位值 / 地址 | rm → hal |
+| 芯片型号（`STM32F103C8T6`）或电气参数 | ds → rm → hal |
+| 函数 / 宏 / 回调 / 怎么配置 | um → hal → examples |
+| 其他 | rm → hal → ds |
+
+融合方式：各集合先做「向量 + BM25 → RRF」，再按路由顺序加权（1.0 / 0.6 / 0.4 …）做第二次 RRF，最后统一 LLM 重排。
+
+两个提升召回的小机制（`router.py`）：
+
+- **类型规则分**：问「函数」时 `kind=function` 的块 +2 分，问「结构体」时 `kind=typedef` +2 分，避免宏组抢位；
+- **中文→API 关键词扩展**：高电平→`SET/high`、低电平→`RESET/low`、翻转→`Toggle`、串口→`UART/USART` 等，只用于召回，重排仍看原问题。
+
+手工指定集合：`ask "..." --sources rm,hal`。
+
+### 多语料评测
+
+```powershell
+python -m stm32_rag eval --cases stm32_rag/eval_cases_multi.json
+```
+
+实测 8 题（覆盖 RM / DS / HAL 源码 / 例程）：全中 **100%**、平均覆盖 **100%**、MRR **1.000**。

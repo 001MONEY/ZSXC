@@ -11,12 +11,64 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import sys
 from collections import Counter
 
-from .config import COLLECTION_NAME, PDF_PATH, BuildConfig, RetrieveConfig, describe
+from .config import (
+    DS_PDF_PATH,
+    PDF_PATH,
+    SOURCE_COLLECTIONS,
+    BuildConfig,
+    RetrieveConfig,
+    describe,
+)
 from .index import Stm32Index
+
+
+def ds_config(page_range=None) -> BuildConfig:
+    """数据手册：无目录页噪点，页脚在 743；不抽插图（与 RM0008 共用图目录会撞 Figure 编号）。"""
+    return BuildConfig(
+        skip_front_pages=1,
+        header_y=74.0,
+        footer_y=740.0,
+        include_figures=False,
+        exclude_chapter_patterns=(r"Revision history",),
+        page_range=page_range,
+    )
+
+
+def source_documents(source: str, pages=None, no_figures: bool = False):
+    """按来源产出 (小节/统计文案, Document 列表)。"""
+    if source == "rm":
+        from .chunker import build_documents
+
+        cfg = BuildConfig(page_range=pages, include_figures=not no_figures)
+        sections, docs = build_documents(PDF_PATH, cfg, source_name=PDF_PATH.name, doc="RM0008")
+        return f"RM0008：小节 {len(sections)}", docs
+    if source == "ds":
+        from .chunker import build_documents
+
+        cfg = ds_config(pages)
+        sections, docs = build_documents(DS_PDF_PATH, cfg, source_name=DS_PDF_PATH.name, doc="DS")
+        return f"DS：小节 {len(sections)}", docs
+    if source == "um":
+        from .loader_um import summarize, um_config, um_documents
+
+        docs = um_documents(cfg=dataclasses.replace(um_config(), page_range=pages))
+        return summarize(docs), docs
+    if source == "hal":
+        from .loader_hal import hal_documents, summarize
+
+        docs = hal_documents()
+        return summarize(docs), docs
+    if source == "examples":
+        from .loader_hal import examples_documents, summarize
+
+        docs = examples_documents()
+        return summarize(docs), docs
+    raise ValueError(f"未知来源：{source}")
 
 
 def parse_pages(value: str | None) -> tuple[int, int] | None:
@@ -30,33 +82,42 @@ def parse_pages(value: str | None) -> tuple[int, int] | None:
 
 
 def cmd_inspect(args) -> int:
-    from .chunker import build_documents
-    from .loader import summarize
-
     print(describe())
-    cfg = BuildConfig(page_range=parse_pages(args.pages))
-    sections, documents = build_documents(PDF_PATH, cfg)
-    print("\n" + summarize(sections) + f"，切块 {len(documents)} 个")
+    summary, documents = source_documents(args.source, parse_pages(args.pages), args.no_figures)
+    print(f"\n{summary}，切块 {len(documents)} 个")
 
-    chapter_counts = Counter(s.chapter for s in sections)
-    print(f"\n覆盖 {len(chapter_counts)} 章：")
+    chapter_counts = Counter(d.metadata.get("chapter", "") for d in documents)
+    print(f"\n覆盖 {len(chapter_counts)} 章/模块：")
     for chapter, count in chapter_counts.most_common(12):
-        print(f"  {count:4d} 节  {chapter[:70]}")
+        print(f"  {count:4d} 块  {chapter[:70]}")
 
     if args.show:
         for doc in documents[: args.show]:
             meta = doc.metadata
             print("\n" + "─" * 78)
-            print(f"{doc.id} | {meta['title'][:64]} | p.{meta['pages']} | {meta['tokens']} tok | 表={meta['has_table']}")
-            print(f"symbols: {meta['symbols'][:100]}")
+            print(f"{doc.id} | {meta.get('title', '')[:64]} | {meta.get('kind')} | {meta.get('tokens')} tok")
+            print(f"symbols: {meta.get('symbols', '')[:100]}")
             print(doc.page_content[:700])
     return 0
 
 
 def cmd_build(args) -> int:
-    index = Stm32Index(collection=args.collection)
-    cfg = BuildConfig(page_range=parse_pages(args.pages), include_figures=not args.no_figures)
-    result = index.build(PDF_PATH, cfg=cfg, rebuild=args.rebuild, workers=args.workers)
+    source = args.source
+    collection = args.collection or SOURCE_COLLECTIONS[source]
+    index = Stm32Index(collection=collection)
+
+    if source in ("rm", "ds"):
+        pdf = PDF_PATH if source == "rm" else DS_PDF_PATH
+        cfg = (
+            BuildConfig(page_range=parse_pages(args.pages), include_figures=not args.no_figures)
+            if source == "rm"
+            else ds_config(parse_pages(args.pages))
+        )
+        result = index.build(pdf, cfg=cfg, rebuild=args.rebuild, workers=args.workers)
+    else:
+        _, documents = source_documents(source, parse_pages(args.pages), args.no_figures)
+        result = index.add_documents(documents, rebuild=args.rebuild, workers=args.workers)
+
     print(json.dumps(result, ensure_ascii=False, indent=2))
     print(json.dumps(index.stats(), ensure_ascii=False, indent=2))
     return 0
@@ -74,7 +135,8 @@ def cmd_figures(args) -> int:
 
 
 def cmd_stats(args) -> int:
-    index = Stm32Index(collection=args.collection)
+    collection = args.collection or SOURCE_COLLECTIONS[args.source]
+    index = Stm32Index(collection=collection)
     print(describe())
     print(json.dumps(index.stats(), ensure_ascii=False, indent=2))
     return 0
@@ -83,7 +145,6 @@ def cmd_stats(args) -> int:
 def _retriever(args):
     from .retrieve import HybridRetriever
 
-    index = Stm32Index(collection=args.collection)
     cfg = RetrieveConfig()
     if getattr(args, "no_rerank", False):
         cfg.use_rerank = False
@@ -93,7 +154,22 @@ def _retriever(args):
         cfg.final_k = args.k
     if getattr(args, "vector_k", None):
         cfg.vector_k = args.vector_k
-    return HybridRetriever(index=index, cfg=cfg)
+
+    spec = (getattr(args, "sources", None) or "auto").strip()
+    if spec == "auto":
+        from .router import MultiSourceRetriever
+
+        return MultiSourceRetriever(cfg=cfg)
+
+    names = [s.strip() for s in spec.split(",") if s.strip()]
+    if len(names) == 1:
+        return HybridRetriever(
+            index=Stm32Index(collection=SOURCE_COLLECTIONS.get(names[0], names[0])), cfg=cfg
+        )
+
+    from .router import MultiSourceRetriever
+
+    return MultiSourceRetriever(sources=names, cfg=cfg)
 
 
 def cmd_ask(args) -> int:
@@ -142,15 +218,19 @@ def main(argv: list[str] | None = None) -> int:
             pass
 
     parser = argparse.ArgumentParser(prog="stm32_rag", description="STM32F10xxx 参考手册 RAG")
-    parser.add_argument("--collection", default=COLLECTION_NAME, help="Chroma 集合名")
+    parser.add_argument("--collection", default=None, help="Chroma 集合名（默认按来源取）")
     sub = parser.add_subparsers(dest="command", required=True)
+    sources = ["rm", "ds", "um", "hal", "examples"]
 
-    p_inspect = sub.add_parser("inspect", help="体检 PDF 并预览切块")
+    p_inspect = sub.add_parser("inspect", help="体检语料并预览切块")
+    p_inspect.add_argument("--source", choices=sources, default="rm", help="语料来源")
     p_inspect.add_argument("--pages", help="印刷页码范围，如 160-200")
+    p_inspect.add_argument("--no-figures", action="store_true")
     p_inspect.add_argument("--show", type=int, default=0, help="打印前 N 个块")
     p_inspect.set_defaults(func=cmd_inspect)
 
     p_build = sub.add_parser("build", help="建库")
+    p_build.add_argument("--source", choices=sources, default="rm", help="语料来源")
     p_build.add_argument("--pages", help="印刷页码范围，如 160-200")
     p_build.add_argument("--rebuild", action="store_true", help="重建集合（先写临时集合，成功后再替换）")
     p_build.add_argument("--workers", type=int, default=4, help="并发嵌入线程数")
@@ -165,10 +245,12 @@ def main(argv: list[str] | None = None) -> int:
     p_fig.set_defaults(func=cmd_figures)
 
     p_stats = sub.add_parser("stats", help="查看集合状态")
+    p_stats.add_argument("--source", choices=sources, default="rm")
     p_stats.set_defaults(func=cmd_stats)
 
     p_ask = sub.add_parser("ask", help="提问")
     p_ask.add_argument("question")
+    p_ask.add_argument("--sources", default="auto", help="auto 或逗号列表：rm,ds,um,hal,examples")
     p_ask.add_argument("-k", type=int, default=None, help="最终片段数")
     p_ask.add_argument("--vector-k", type=int, default=None)
     p_ask.add_argument("--no-rerank", action="store_true")
@@ -179,6 +261,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p_eval = sub.add_parser("eval", help="锚点评测")
     p_eval.add_argument("--cases", help="评测集路径")
+    p_eval.add_argument("--sources", default="auto", help="auto 或逗号列表")
     p_eval.add_argument("-k", type=int, default=None)
     p_eval.add_argument("--vector-k", type=int, default=None)
     p_eval.add_argument("--no-rerank", action="store_true")
