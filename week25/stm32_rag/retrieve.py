@@ -251,11 +251,16 @@ class HybridRetriever:
     def _vector_hits(self, query: str, k: int) -> list[Hit]:
         corpus = self.ensure_ready()
         n = min(k, max(1, len(corpus.ids)))
-        data = self.index.collection.query(
-            query_embeddings=[self.index.embed_query(query)],
-            n_results=n,
-            include=["documents", "metadatas", "distances"],
-        )
+        try:
+            data = self.index.collection.query(
+                query_embeddings=[self.index.embed_query(query)],
+                n_results=n,
+                include=["documents", "metadatas", "distances"],
+            )
+        except Exception as exc:  # noqa: BLE001
+            # 多集合并发读时 Chroma 1.5 偶发段读错误：降级为纯 BM25，不拖垓整个检索
+            print(f"  [警告] {self.index.name} 向量查询失败，降级为 BM25：{type(exc).__name__}")
+            return []
         hits: list[Hit] = []
         for i, doc_id in enumerate(data["ids"][0]):
             distance = float(data["distances"][0][i])

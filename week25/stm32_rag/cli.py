@@ -142,10 +142,33 @@ def cmd_figures(args) -> int:
 
 
 def cmd_stats(args) -> int:
-    collection = args.collection or SOURCE_COLLECTIONS[args.source]
+    if args.collection:
+        collection = args.collection
+    elif args.source in SOURCE_COLLECTIONS:
+        collection = SOURCE_COLLECTIONS[args.source]
+    else:
+        from .ingest import load_registry
+
+        collection = str(load_registry().get(args.source, {}).get("collection", "")) or args.source
     index = Stm32Index(collection=collection)
     print(describe())
     print(json.dumps(index.stats(), ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_ingest(args) -> int:
+    from .ingest import ingest
+
+    result = ingest(
+        pdf=args.pdf,
+        md=args.md,
+        collection=args.collection,
+        tier=args.tier,
+        rebuild=args.rebuild,
+        workers=args.workers,
+        pages=args.pages,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -252,8 +275,17 @@ def main(argv: list[str] | None = None) -> int:
     p_fig.set_defaults(func=cmd_figures)
 
     p_stats = sub.add_parser("stats", help="查看集合状态")
-    p_stats.add_argument("--source", choices=sources, default="rm")
+    p_stats.add_argument("--source", default="rm", help="内置来源或 docs:<slug>")
     p_stats.set_defaults(func=cmd_stats)
+
+    p_ingest = sub.add_parser("ingest", help="PDF -> MinerU -> Markdown -> 建库（全自动）")
+    p_ingest.add_argument("pdf", nargs="?", help="待处理的 PDF（配合 --md 时可省略）")
+    p_ingest.add_argument("--md", help="已有 Markdown，跳过 MinerU")
+    p_ingest.add_argument("--tier", default="basic", choices=["flash", "basic", "standard", "advanced"])
+    p_ingest.add_argument("--pages", help="只解析指定页，如 1-10")
+    p_ingest.add_argument("--rebuild", action="store_true", help="重建该文档的集合")
+    p_ingest.add_argument("--workers", type=int, default=8)
+    p_ingest.set_defaults(func=cmd_ingest)
 
     p_ask = sub.add_parser("ask", help="提问")
     p_ask.add_argument("question")

@@ -199,3 +199,33 @@ python -m stm32_rag eval --cases stm32_rag/eval_cases_multi.json
 ```
 
 实测 8 题（覆盖 RM / DS / HAL 源码 / 例程）：全中 **100%**、平均覆盖 **100%**、MRR **1.000**。
+
+## 九、上传 PDF：MinerU → Markdown → 建库（全自动）
+
+```powershell
+# 一条命令跑完：起 MinerU 服务 -> 解析 -> 切块 -> 清洗 -> 入库 -> 注册
+python -m stm32_rag ingest D:\docs\应用笔记.pdf --tier basic
+
+# 已有 Markdown，跳过 MinerU
+python -m stm32_rag ingest --md D:\docs\笔记.md
+
+# 大文档先试前 10 页；重建该文档集合
+python -m stm32_rag ingest 手册.pdf --pages 1-10
+python -m stm32_rag ingest 手册.pdf --rebuild
+```
+
+流程与产物：
+
+```
+PDF → MinerU(basic) → mineru_out/<文件名>.md
+    → 按 Markdown 标题切节（代码块/表格原子保留）→ 清洗 → 嵌入
+    → chroma_db/stm32_doc_<slug>_text_embedding_v4
+    → chroma_db/custom_sources.json 注册 docs:<slug>
+```
+
+- `router` 会自动把上传文档纳入检索（权重 0.8，且每个自定义来源至少保留 1 个重排候选，不会被内置语料挤掉）；
+- 查看状态：`python -m stm32_rag stats --source docs:<slug>`；也可 `ask "..." --sources docs:<slug>` 只查这份文档；
+- MinerU 安装在 `D:\project\step3\llm`（见 `MINERU.md`），可用 `MINERU_EXE` / `MINERU_TIER` 覆盖；
+- 解析产物留在 `mineru_out/`，重跑建库不会重复解析；
+- 清洗会合并被字体拆开的字母（`S T M 32` → `STM32`），并丢弃 MinerU 的 `page x/y` 页眉页脚；
+- 实测：数据手册前 10 页解析出的标题、列表、表格都是标准 Markdown；2 页 PDF 解析 14 秒。

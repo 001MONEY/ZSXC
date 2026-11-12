@@ -65,6 +65,17 @@ EXAMPLES_COLLECTION = os.getenv("STM32_EXAMPLES_COLLECTION", "stm32f1_hal_exampl
 DB_DIR = Path(os.getenv("STM32_DB_DIR", str(PROJECT_DIR / "chroma_db"))).expanduser()
 FIGURES_DIR = DB_DIR / "figures"  # 插图 PNG 与 manifest.json
 
+# ---- MinerU（PDF -> Markdown）与上传注册表 ----
+MINERU_EXE = Path(
+    os.getenv("MINERU_EXE", r"D:\project\step3\llm\Scripts\mineru.exe")
+).expanduser()
+MINERU_TIER = os.getenv("MINERU_TIER", "basic")  # flash/basic/standard/advanced
+MINERU_MD_DIR = Path(os.getenv("MINERU_MD_DIR", str(PROJECT_DIR / "mineru_out"))).expanduser()
+# 上传文档的集合注册表：router 据此把新文档纳入检索
+CUSTOM_SOURCES_FILE = Path(
+    os.getenv("STM32_CUSTOM_SOURCES", str(DB_DIR / "custom_sources.json"))
+).expanduser()
+
 # ---------------------------------------------------------------- 模型
 EMBED_MODEL = os.getenv("STM32_EMBED_MODEL", "text-embedding-v4")
 EMBED_DIM = int(os.getenv("STM32_EMBED_DIM", "1024"))

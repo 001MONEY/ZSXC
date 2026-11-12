@@ -62,13 +62,18 @@ class Stm32Index:
         self.db_dir = Path(db_dir)
         self.embeddings = embeddings or get_embeddings()
         self._client = shared_client(self.db_dir)
+        self._collection_obj = None
 
     # ------------------------------------------------------------ 集合
     @property
     def collection(self):
-        return self._client.get_or_create_collection(
-            name=self.name, metadata={"hnsw:space": "cosine"}
-        )
+        # 同一个集合只取一次句柄：重复 get_or_create 会产生多个 Collection 对象，
+        # Chroma 1.5 在多句柄并发读时偶发 “hnsw segment reader: Nothing found on disk”。
+        if self._collection_obj is None:
+            self._collection_obj = self._client.get_or_create_collection(
+                name=self.name, metadata={"hnsw:space": "cosine"}
+            )
+        return self._collection_obj
 
     def exists(self) -> bool:
         return self.name in {c.name for c in self._client.list_collections()}
@@ -81,11 +86,13 @@ class Stm32Index:
             self._client.delete_collection(self.name)
         except Exception:
             pass
+        self._collection_obj = None
 
     def _swap(self, work_name: str) -> None:
         """用临时集合顶替正式集合：删旧的，再把临时集合改名过去。"""
         self.reset()
         self._client.get_collection(work_name).modify(name=self.name)
+        self._collection_obj = None
 
     # ------------------------------------------------------------ 嵌入
     def _embed_group(self, texts: list[str], retries: int = 3) -> list[list[float]]:

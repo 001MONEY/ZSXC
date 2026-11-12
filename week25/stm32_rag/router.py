@@ -18,6 +18,7 @@ from types import SimpleNamespace
 
 from .config import SOURCE_COLLECTIONS, RetrieveConfig, get_llm
 from .index import Stm32Index
+from .ingest import load_registry
 from .retrieve import Hit, HybridRetriever, rerank_hits
 
 _SYMBOL_RE = re.compile(r"\b(?:HAL|LL)_[A-Za-z0-9_]+\b")
@@ -130,6 +131,15 @@ class MultiSourceRetriever:
         db_dir=None,
     ) -> None:
         self.sources = list(sources or DEFAULT_SOURCES)
+        # 上传文档（PDF -> MinerU -> 建库）注册在 custom_sources.json，默认也参与检索
+        self._custom = {
+            name: str(meta.get("collection", ""))
+            for name, meta in load_registry().items()
+            if isinstance(meta, dict) and meta.get("collection")
+        }
+        for name in self._custom:
+            if name not in self.sources:
+                self.sources.append(name)
         self.cfg = cfg or RetrieveConfig()
         self._llm = llm
         self._db_dir = db_dir
@@ -145,10 +155,11 @@ class MultiSourceRetriever:
     def _retriever(self, name: str) -> HybridRetriever | None:
         if name in self._retrievers:
             return self._retrievers[name]
-        if name in self._unavailable or name not in SOURCE_COLLECTIONS:
+        collection = SOURCE_COLLECTIONS.get(name) or self._custom.get(name)
+        if name in self._unavailable or not collection:
             return None
-        index = Stm32Index(collection=SOURCE_COLLECTIONS[name], db_dir=self._db_dir) if self._db_dir else Stm32Index(
-            collection=SOURCE_COLLECTIONS[name]
+        index = Stm32Index(collection=collection, db_dir=self._db_dir) if self._db_dir else Stm32Index(
+            collection=collection
         )
         if not index.exists() or index.count() == 0:
             self._unavailable.add(name)
@@ -162,6 +173,10 @@ class MultiSourceRetriever:
         names = [n for n in route(query) if self._retriever(n) is not None]
         if not names:  # 规则命中的集合都没建，退回全部可用集合
             names = [n for n in self.sources if self._retriever(n) is not None]
+        # 上传文档始终参与一次合并（权重最低），否则上传完仍答不到自己的资料
+        for name in self._custom:
+            if name not in names and self._retriever(name) is not None:
+                names.append(name)
         return names
 
     def ensure_ready(self):
@@ -186,20 +201,31 @@ class MultiSourceRetriever:
 
         bonus: dict[str, float] = defaultdict(float)
         merged: dict[str, Hit] = {}
+        best_by_source: dict[str, Hit] = {}
         # 路由顺序即重要程度：第一位 1.0，之后依次衰减，
         # 否则例程库的函数块会把 HAL 源码的函数挤出重排池。
         weights = [1.0, 0.6, 0.4, 0.3, 0.2]
         for position, name in enumerate(names):
             weight = weights[min(position, len(weights) - 1)]
+            if name in self._custom:
+                weight = max(weight, 0.8)  # 用户上传的文档不该被内置语料淹没
             retriever = self._retrievers[name]
             ranked = retriever.recall(search_query, cfg)[: cfg.rerank_pool]
             for rank, hit in enumerate(ranked, start=1):
                 hit.metadata = {**hit.metadata, "source_key": name}
                 merged.setdefault(hit.id, hit)
+                best_by_source.setdefault(name, hit)
                 # 规则加权：问函数时函数块轻微上提（量级约等于一个名次贡献）
                 bonus[hit.id] += weight * (1.0 / (cfg.rrf_k + rank) + 0.008 * _kind_bonus(query, hit))
 
         candidates = sorted(merged.values(), key=lambda h: bonus[h.id], reverse=True)[: cfg.rerank_pool]
+        # 兜底：每个上传文档至少留一个候选进重排（否则权重再高也可能被 14 名截断）
+        present_sources = {h.metadata.get("source_key") for h in candidates}
+        for name in self._custom:
+            if name in present_sources or name not in best_by_source:
+                continue
+            candidates.append(best_by_source[name])
+            present_sources.add(name)
         for hit in candidates:
             hit.score = bonus[hit.id]
         if cfg.use_rerank:
@@ -268,5 +294,6 @@ class MultiSourceRetriever:
         return result
 
     def describe(self) -> str:
-        available = [n for n in self.sources if self._retriever(n) is not None]
-        return "可用集合：" + ("、".join(available) if available else "（无）")
+        # 只报名字，不逐个打开集合：一次性持有多个 Collection 句柄会触发 Chroma 段读偶发错误
+        names = list(self.sources)
+        return "可用集合：" + ("、".join(names) if names else "（无）")
