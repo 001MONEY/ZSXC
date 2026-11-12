@@ -47,3 +47,7 @@ Thumbs.db
 
 # Chroma 向量库 + 插图 PNG + 解析缓存（可由 `python -m stm32_rag build` 重建，约百 MB）
 week25/chroma_db/
+
+# Chroma/MinerU temp artifacts
+blobs/
+.mineru-service.lock
