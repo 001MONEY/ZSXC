@@ -157,17 +157,32 @@ def cmd_stats(args) -> int:
 
 
 def cmd_ingest(args) -> int:
-    from .ingest import ingest
+    from .ingest import ingest, ingest_batch
 
-    result = ingest(
-        pdf=args.pdf,
-        md=args.md,
+    pdfs = args.pdf or []
+    common = dict(
         collection=args.collection,
         tier=args.tier,
         rebuild=args.rebuild,
         workers=args.workers,
         pages=args.pages,
+        force=args.force,
     )
+    if args.md:
+        result = ingest(md=args.md, **common)
+    elif len(pdfs) == 1:
+        result = ingest(pdf=pdfs[0], **common)
+    elif pdfs:
+        result = ingest_batch(
+            pdfs,
+            tier=args.tier,
+            pages=args.pages,
+            rebuild=args.rebuild,
+            workers=args.workers,
+            force=args.force,
+        )
+    else:
+        raise SystemExit("请提供 PDF，或用 --md 指定 Markdown。")
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
@@ -278,11 +293,12 @@ def main(argv: list[str] | None = None) -> int:
     p_stats.add_argument("--source", default="rm", help="内置来源或 docs:<slug>")
     p_stats.set_defaults(func=cmd_stats)
 
-    p_ingest = sub.add_parser("ingest", help="PDF -> MinerU -> Markdown -> 建库（全自动）")
-    p_ingest.add_argument("pdf", nargs="?", help="待处理的 PDF（配合 --md 时可省略）")
+    p_ingest = sub.add_parser("ingest", help="PDF -> MinerU -> Markdown -> 建库（全自动，可多份）")
+    p_ingest.add_argument("pdf", nargs="*", help="待处理的 PDF，可多个：a.pdf b.pdf")
     p_ingest.add_argument("--md", help="已有 Markdown，跳过 MinerU")
     p_ingest.add_argument("--tier", default="basic", choices=["flash", "basic", "standard", "advanced"])
     p_ingest.add_argument("--pages", help="只解析指定页，如 1-10")
+    p_ingest.add_argument("--force", action="store_true", help="已有 Markdown 也重新解析")
     p_ingest.add_argument("--rebuild", action="store_true", help="重建该文档的集合")
     p_ingest.add_argument("--workers", type=int, default=8)
     p_ingest.set_defaults(func=cmd_ingest)

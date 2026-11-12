@@ -12,8 +12,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 
 from .config import SOURCE_COLLECTIONS, RetrieveConfig, get_llm
@@ -199,6 +201,17 @@ class MultiSourceRetriever:
         names = self.plan(query)
         search_query = expand_query(query)
 
+        # 并行取各源的查询向量（网络 I/O 是主要延迟），Chroma 查询保持串行：
+        # 多集合并发读时 Chroma 1.5 会偶发 hnsw 段读错误。
+        embeddings: dict[str, list[float] | None] = {}
+        if len(names) > 1:
+            with ThreadPoolExecutor(max_workers=min(8, len(names))) as pool:
+                vectors = pool.map(
+                    lambda name: self._retrievers[name].index.embed_query(search_query), names
+                )
+                for name, vector in zip(names, vectors):
+                    embeddings[name] = vector
+
         bonus: dict[str, float] = defaultdict(float)
         merged: dict[str, Hit] = {}
         best_by_source: dict[str, Hit] = {}
@@ -210,7 +223,7 @@ class MultiSourceRetriever:
             if name in self._custom:
                 weight = max(weight, 0.8)  # 用户上传的文档不该被内置语料淹没
             retriever = self._retrievers[name]
-            ranked = retriever.recall(search_query, cfg)[: cfg.rerank_pool]
+            ranked = retriever.recall(search_query, cfg, query_embedding=embeddings.get(name))[: cfg.rerank_pool]
             for rank, hit in enumerate(ranked, start=1):
                 hit.metadata = {**hit.metadata, "source_key": name}
                 merged.setdefault(hit.id, hit)
@@ -297,3 +310,7 @@ class MultiSourceRetriever:
         # 只报名字，不逐个打开集合：一次性持有多个 Collection 句柄会触发 Chroma 段读偶发错误
         names = list(self.sources)
         return "可用集合：" + ("、".join(names) if names else "（无）")
+
+    async def asearch(self, query: str, cfg: RetrieveConfig | None = None) -> list[Hit]:
+        """异步版本：内部用线程池跑同步检索，供 FastAPI/批量脚本 await。"""
+        return await asyncio.to_thread(self.search, query, cfg)

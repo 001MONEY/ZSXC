@@ -248,12 +248,12 @@ class HybridRetriever:
         return self._llm
 
     # ------------------------------------------------------------ 检索
-    def _vector_hits(self, query: str, k: int) -> list[Hit]:
+    def _vector_hits(self, query: str, k: int, embedding: list[float] | None = None) -> list[Hit]:
         corpus = self.ensure_ready()
         n = min(k, max(1, len(corpus.ids)))
         try:
             data = self.index.collection.query(
-                query_embeddings=[self.index.embed_query(query)],
+                query_embeddings=[embedding or self.index.embed_query(query)],
                 n_results=n,
                 include=["documents", "metadatas", "distances"],
             )
@@ -351,13 +351,18 @@ class HybridRetriever:
                 )
         return result
 
-    def recall(self, query: str, cfg: RetrieveConfig | None = None) -> list[Hit]:
+    def recall(
+        self,
+        query: str,
+        cfg: RetrieveConfig | None = None,
+        query_embedding: list[float] | None = None,
+    ) -> list[Hit]:
         """两路召回 + RRF 融合后的候选（不重排、不补邻居，供跨集合路由复用）。"""
         cfg = cfg or self.cfg
         self.ensure_ready()
 
         target = density_hint(query) if cfg.device_boost else ""
-        vector_hits = self._vector_hits(query, cfg.vector_k)
+        vector_hits = self._vector_hits(query, cfg.vector_k, embedding=query_embedding)
         bm25_hits = self._bm25_hits(query, cfg.bm25_k)
         fused = self._rrf(vector_hits, bm25_hits)
         if target:

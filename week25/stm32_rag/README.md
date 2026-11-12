@@ -209,9 +209,13 @@ python -m stm32_rag ingest D:\docs\应用笔记.pdf --tier basic
 # 已有 Markdown，跳过 MinerU
 python -m stm32_rag ingest --md D:\docs\笔记.md
 
-# 大文档先试前 10 页；重建该文档集合
+# 大文档先试前 10 页；重建该文档集合；强制重新解析
 python -m stm32_rag ingest 手册.pdf --pages 1-10
 python -m stm32_rag ingest 手册.pdf --rebuild
+python -m stm32_rag ingest 手册.pdf --force
+
+# 批量：全部先入队，MinerU 后台逐本解析，完成一本就切块入库
+python -m stm32_rag ingest 手册.pdf 应用笔记.pdf ANxxxx.pdf
 ```
 
 流程与产物：
@@ -229,3 +233,10 @@ PDF → MinerU(basic) → mineru_out/<文件名>.md
 - 解析产物留在 `mineru_out/`，重跑建库不会重复解析；
 - 清洗会合并被字体拆开的字母（`S T M 32` → `STM32`），并丢弃 MinerU 的 `page x/y` 页眉页脚；
 - 实测：数据手册前 10 页解析出的标题、列表、表格都是标准 Markdown；2 页 PDF 解析 14 秒。
+
+异步 / 并发：
+
+- `ingest` 走 `mineru parse --no-wait` 入队（约 2 秒返回任务 ID），再轮询 Markdown 是否落盘；批量时多本排队并行解析，避免一本一本等；
+- 切块是 CPU 密集型（tiktoken + 正则 + GIL），不做线程化；只有嵌入调用并发（`--workers`，默认 8）；
+- 检索侧多源召回并行取查询向量（每个源一次 embedding 调用曾是主要延迟），Chroma 查询仍串行，避免多集合并发读的 HNSW 段错误；
+- 需要在事件循环里用：`await router.asearch(query)` / `await aingest_batch(pdfs=[...])`。
