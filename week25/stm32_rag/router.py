@@ -37,9 +37,11 @@ _CODE_API_RE = re.compile(
     r"怎么配置|如何配置|配置流程|使用步骤",
     re.IGNORECASE,
 )
-_FUNC_Q = re.compile(r"函数|哪个函数|回调|调用|实现|返回值")
+_FUNC_Q = re.compile(r"函数|哪个函数|回调|调用|实现")
 _DEF_Q = re.compile(r"结构体|成员|字段|类型定义|枚举")
 _MACRO_Q = re.compile(r"宏|define", re.IGNORECASE)
+_EXAMPLE_Q = re.compile(r"例程|示例|demo|案例", re.IGNORECASE)
+_STATUS_Q = re.compile(r"返回|状态|错误码")
 
 # 中文问法 -> 英文 API 关键词：代码语料是英文的，不做这层映射，
 # “高电平”和“TogglePin”在向量/BM25 里几乎无法区分。
@@ -58,6 +60,8 @@ _EXPANSIONS = (
     ("时钟使能", ("CLK_ENABLE",)),
     ("初始化", ("Init",)),
     ("复位", ("DeInit", "RESET")),
+    ("返回状态", ("HAL_StatusTypeDef", "HAL_OK", "HAL_ERROR", "HAL_BUSY", "HAL_TIMEOUT")),
+    ("返回值", ("HAL_StatusTypeDef", "HAL_OK", "HAL_ERROR")),
 )
 
 
@@ -80,6 +84,8 @@ def _kind_bonus(query: str, hit: Hit) -> float:
         bonus += 2.0
     if _MACRO_Q.search(query) and kind in ("macro", "define"):
         bonus += 2.0
+    if _STATUS_Q.search(query) and "StatusTypeDef" in str(hit.metadata.get("symbol", "")):
+        bonus += 2.0
     return bonus
 
 DEFAULT_SOURCES = ("rm", "ds", "um", "hal", "examples")
@@ -93,6 +99,8 @@ def route(query: str) -> list[str]:
         return ["rm", "hal"]
     if _CHIP_RE.search(query) or _DATASHEET_RE.search(query):
         return ["ds", "rm", "hal"]
+    if _EXAMPLE_Q.search(query):
+        return ["examples", "hal", "um"]
     if _CODE_API_RE.search(query):
         return ["hal", "um", "examples"]
     return ["rm", "hal", "ds"]
@@ -206,7 +214,29 @@ class MultiSourceRetriever:
         top = _collapse_sections(candidates)[: cfg.final_k]
         if cfg.expand_neighbors:
             top = self._expand(top, cfg)
+        top = self._append_pinned(query, top)
         return top
+
+    def _append_pinned(self, query: str, hits: list[Hit]) -> list[Hit]:
+        """已知必者必补：问返回状态时，把 HAL_StatusTypeDef 枚举块补进上下文。"""
+        if not _STATUS_Q.search(query):
+            return hits
+        retriever = self._retrievers.get("hal")
+        if retriever is None:
+            return hits
+        corpus = retriever.ensure_ready()
+        present = {hit.id for hit in hits}
+        for i, meta in enumerate(corpus.metas):
+            if meta.get("symbol") == "HAL_StatusTypeDef" and corpus.ids[i] not in present:
+                return hits + [
+                    Hit(
+                        id=corpus.ids[i],
+                        text=corpus.texts[i],
+                        metadata={**meta, "source_key": "hal"},
+                        expanded=True,
+                    )
+                ]
+        return hits
 
     def _expand(self, hits: list[Hit], cfg: RetrieveConfig) -> list[Hit]:
         """同节邻居补全：寄存器编码表/枚举常常就落在相邻块里。"""
