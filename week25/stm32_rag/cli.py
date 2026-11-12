@@ -113,7 +113,14 @@ def cmd_build(args) -> int:
             if source == "rm"
             else ds_config(parse_pages(args.pages))
         )
-        result = index.build(pdf, cfg=cfg, rebuild=args.rebuild, workers=args.workers)
+        result = index.build(
+            pdf,
+            cfg=cfg,
+            rebuild=args.rebuild,
+            workers=args.workers,
+            source_name=pdf.name,
+            doc="RM0008" if source == "rm" else "DS",
+        )
     else:
         _, documents = source_documents(source, parse_pages(args.pages), args.no_figures)
         result = index.add_documents(documents, rebuild=args.rebuild, workers=args.workers)

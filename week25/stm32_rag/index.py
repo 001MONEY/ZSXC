@@ -26,6 +26,17 @@ from .figures import extract_figures, figure_documents
 
 EMBED_GROUP = 200  # 每个线程一次提交给 embed_documents 的文本条数
 
+# 同一路径只保留一个 PersistentClient：多实例并发访问同一个 chroma 目录时，
+# Rust 后端会报 “Error creating hnsw segment reader: Nothing found on disk”。
+_CLIENTS: dict[str, "chromadb.PersistentClient"] = {}
+
+
+def shared_client(db_dir: Path):
+    key = str(Path(db_dir).resolve()).lower()
+    if key not in _CLIENTS:
+        _CLIENTS[key] = chromadb.PersistentClient(path=key)
+    return _CLIENTS[key]
+
 
 def _sanitize(metadata: dict) -> dict:
     """Chroma 只接受 str/int/float/bool。"""
@@ -50,7 +61,7 @@ class Stm32Index:
         self.name = collection
         self.db_dir = Path(db_dir)
         self.embeddings = embeddings or get_embeddings()
-        self._client = chromadb.PersistentClient(path=str(self.db_dir))
+        self._client = shared_client(self.db_dir)
 
     # ------------------------------------------------------------ 集合
     @property
@@ -122,12 +133,14 @@ class Stm32Index:
         workers: int = 4,
         batch: int = 128,
         quiet: bool = False,
+        source_name: str | None = None,
+        doc: str = "RM0008",
     ) -> dict:
         cfg = cfg or BuildConfig()
         started = time.time()
 
         # 先解析：PDF 缺失、解析失败都发生在动旧集合之前
-        sections, documents = build_documents(pdf_path, cfg)
+        sections, documents = build_documents(pdf_path, cfg, source_name=source_name, doc=doc)
         if not documents:
             raise RuntimeError("解析结果为空，未改动现有集合。")
         figures = extract_figures(pdf_path, cfg) if cfg.include_figures else []

@@ -204,7 +204,38 @@ class MultiSourceRetriever:
             )
 
         top = _collapse_sections(candidates)[: cfg.final_k]
+        if cfg.expand_neighbors:
+            top = self._expand(top, cfg)
         return top
+
+    def _expand(self, hits: list[Hit], cfg: RetrieveConfig) -> list[Hit]:
+        """同节邻居补全：寄存器编码表/枚举常常就落在相邻块里。"""
+        result: list[Hit] = []
+        used = 0
+        seen: set[str] = set()
+        for hit in hits:
+            size = int(hit.metadata.get("tokens", 0) or 0)
+            if result and used + size > cfg.max_context_tokens:
+                break
+            result.append(hit)
+            seen.add(hit.id)
+            used += size
+
+            source = hit.metadata.get("source_key")
+            retriever = self._retrievers.get(source)
+            if retriever is None:
+                continue
+            for extra in retriever._expand([hit], cfg.max_context_tokens - used):
+                if extra.id in seen:
+                    continue
+                extra.metadata = {**extra.metadata, "source_key": source}
+                extra_size = int(extra.metadata.get("tokens", 0) or 0)
+                if used + extra_size > cfg.max_context_tokens:
+                    continue
+                seen.add(extra.id)
+                result.append(extra)
+                used += extra_size
+        return result
 
     def describe(self) -> str:
         available = [n for n in self.sources if self._retriever(n) is not None]

@@ -110,6 +110,10 @@ class Hit:
         title = self.metadata.get("title", "")
         pages = self.metadata.get("pages", self.metadata.get("page", ""))
         doc = self.metadata.get("doc", "")
+        if not doc:  # 旧集合没写 doc，回退到来源文件名
+            doc = str(self.metadata.get("source", ""))
+            if doc.lower().endswith(".pdf"):
+                doc = doc[:-4]
         prefix = f"[{doc}] " if doc else ""
         return f"{prefix}{title}｜p.{pages}"
 
