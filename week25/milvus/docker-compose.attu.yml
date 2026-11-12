@@ -1,0 +1,18 @@
+# Optional: Attu web console for Milvus v3.0.x
+# Start together with Milvus:
+#   docker compose -f docker-compose.yml -f docker-compose.attu.yml up -d
+# Open http://localhost:8000 and connect to milvus-standalone:19530
+services:
+  attu:
+    container_name: milvus-attu
+    image: zilliz/attu:v3.0.1
+    environment:
+      MILVUS_URL: milvus-standalone:19530
+    ports:
+      - "8000:3000"
+    depends_on:
+      - standalone
+
+networks:
+  default:
+    name: milvus

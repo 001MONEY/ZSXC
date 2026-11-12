@@ -1,0 +1,30 @@
+# ===== Python 缓存 =====
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# ===== 本地虚拟环境 =====
+.venv/
+.mineru-venv/
+
+# ===== 向量库与解析产物（可用 notebook / MinerU 重跑重建）=====
+chroma_db/
+blobs/
+mineru_out/
+
+# ===== Milvus 本地数据卷（etcd / minio / milvus 运行数据，体积大且随时变化）=====
+milvus/volumes/
+
+# ===== MinerU 运行期临时文件 =====
+.mineru-service.lock
+
+# ===== 模型权重与大文件 =====
+*.pth
+*.pt
+*.onnx
+*.bin
+
+# ===== 日志与系统文件 =====
+*.log
+Thumbs.db
+.DS_Store
