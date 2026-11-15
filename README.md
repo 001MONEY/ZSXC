@@ -1,8 +1,8 @@
 # 真术相成学习笔记 — Python 与计算机视觉实训
 
 > **学员：** 钱富森  
-> **周期：** 2026.05.20 — 2026.11.08  
-> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现 → Hugging Face 生态与预训练模型部署（Transformers 全家桶 Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer、BERT 原理与微调任务、Qwen3.5-2B 多模态小模型本机部署）→ 大模型微调实战（rbt3 情感分类 → mengzi-T5 新闻标题生成全参微调 → LoRA 原理与 Qwen3.5-2B 医疗推理指令微调 → QLoRA Qwen3.5-9B 高等数学 SFT 四阶段实验 → 大模型训练工程化（分布式训练 DP/PP/TP 与 DDP/DeepSpeed ZeRO → Ollama / EasyDataSet / LLaMA-Factory 本地工具链 → 低精度训练 int8/int4/NF4 量化）→ **LangChain 应用开发**（OpenAI SDK 直连与 FastAPI 服务化 → Prompt 模板 / Few-shot / 语义选例 / LCEL / 输出解析 → 对话记忆与长度限制 + 摘要压缩作业）→ **LangChain 工具与 LangGraph 编排**（工具调用演进 → 图结构：状态/条件边/reducer/子图/Send/检查点 → 运行时设施：ToolNode/Store/Runtime·Context/流式/人工断点/时间旅行 → 实战：7 节点 SQL Agent））
+> **周期：** 2026.05.20 — 2026.11.15  
+> **内容：** Python 基础 → 数据结构与 GUI → 文件与数据处理 → 计算机视觉 → 深度学习基础 → 深度学习入门与小测验 → CNN 实战 → 经典架构与工业异常检测 → 小黄人目标检测 → 金鱼目标检测实战 → YOLOv5 目标检测 → 骨龄评估系统与 YOLOv8-pose 关键点检测 → 人体动作识别与 YOLOv8 分割/ONNX 部署 → 模型压缩与 TensorRT 部署 / 度量学习损失 → FastAPI/ONNX 推理服务 → 智能称重台综合项目 → **第三阶段：大模型与自然语言处理**（FAISS 向量检索 → NLP 基础与分词/Tokenizer → 词向量与 Word2Vec → CBOW 实战与 gensim 词向量 → RNN/LSTM 原理与手写实现 → RNN Seq2Seq 中英翻译 → Seq2Seq 注意力机制（加性/乘性对照重赛）→ Transformer 原理拆解与手写实现 → Hugging Face 生态与预训练模型部署（Transformers 全家桶 Tokenizer/Model/Pipeline/Datasets/Evaluate/Trainer、BERT 原理与微调任务、Qwen3.5-2B 多模态小模型本机部署）→ 大模型微调实战（rbt3 情感分类 → mengzi-T5 新闻标题生成全参微调 → LoRA 原理与 Qwen3.5-2B 医疗推理指令微调 → QLoRA Qwen3.5-9B 高等数学 SFT 四阶段实验 → 大模型训练工程化（分布式训练 DP/PP/TP 与 DDP/DeepSpeed ZeRO → Ollama / EasyDataSet / LLaMA-Factory 本地工具链 → 低精度训练 int8/int4/NF4 量化）→ **LangChain 应用开发**（OpenAI SDK 直连与 FastAPI 服务化 → Prompt 模板 / Few-shot / 语义选例 / LCEL / 输出解析 → 对话记忆与长度限制 + 摘要压缩作业）→ **LangChain 工具与 LangGraph 编排**（工具调用演进 → 图结构：状态/条件边/reducer/子图/Send/检查点 → 运行时设施：ToolNode/Store/Runtime·Context/流式/人工断点/时间旅行 → 实战：7 节点 SQL Agent）→ **RAG 系统与 Agent 工程化**（RAG 七步流水线（加载/清洗/切块/嵌入/Chroma/检索/生成）→ Milvus 稠密+稀疏混合检索、weighted/RRF 融合、Cross-Encoder 精排、MultiQuery 改写、RAGAS 评估 → `create_agent` 与四类中间件 → MCP 协议与自建 Server → Deep Agents harness（backend/权限/人在回路/Skills/深度研究）→ 工程化：STM32 多语料 RAG 知识库 + MinerU 上传通道））
 
 ---
 
@@ -34,6 +34,7 @@
 | **Week 22** | 10.19 - 10.23 | 第三阶段 · 分布式训练与低精度训练 | 微调动机与显存计算、LoRA 原理；分布式训练（DP/PP/TP/3D 并行、DDP 与 AllReduce、DeepSpeed ZeRO 配置与启动）；Ollama / EasyDataSet / LLaMA-Factory 本地工具链；int8/int4/NF4 量化与混合精度分解；Qwen3.5-9B 高数 QLoRA 实验报告 |
 | **Week 23** | 10.26 - 10.30 | 第三阶段 · LangChain 应用开发 | uv 环境与 OpenAI SDK 直连/流式、三种建模型方式、消息类型与多轮历史、FastAPI 服务化与请求解析；PromptTemplate/ChatPromptTemplate/MessagesPlaceholder、Few-shot 与语义选例、LCEL 管道、Json/Pydantic 输出解析、RunnableWithMessageHistory（内存/Redis）；作业：长度限制 + 摘要压缩多轮机器人 |
 | **Week 24** | 11.02 - 11.08 | 第三阶段 · LangChain 工具与 LangGraph 编排 | 工具调用演进（手搓协议 → `bind_tools` → ReAct 循环 → AgentExecutor → `create_agent`）；LangGraph 图结构（State/条件边/reducer/子图/`Send`/检查点）；运行时设施（`ToolNode`/Store/Runtime·Context/`ToolRuntime`/`stream_mode`/`interrupt_before`/`interrupt`/时间旅行）；实战：7 节点 SQL Agent（只读账号 + sqlglot 白名单 + 重试回路）；作业：和风天气 JWT 工具 |
+| **Week 25** | 11.09 - 11.15 | 第三阶段 · RAG 系统与 Agent 工程化 | RAG 七步流水线（加载/清洗/切块/嵌入/Chroma/检索/生成）；Milvus 稠密+稀疏混合检索、weighted/RRF 融合、DashScope 精排、MultiQuery 改写、RAGAS 评估；`create_agent` 与中间件（`wrap_model_call`/`wrap_tool_call`/摘要/动态提示）；MCP（JSON-RPC、SSE/Stdio、自建 Server）；Deep Agents（backend/权限/人在回路/Skills/深度研究）；工程：STM32 多语料 RAG（跨库路由 + MinerU ingest） |
 ---
 
 ## 📂 项目结构
@@ -337,6 +338,20 @@ step1/
 │   ├── langgraph-sql-agent/            — SQL Agent 项目（agent/db/verify/import_employees + compose.yaml，MySQL 8.4）
 │   ├── 天气预报/                        — 作业：和风天气 JWT 真实调用 + LangChain 工具封装（config/keys 已 .gitignore）
 │   └── employees.sql                   — MySQL 员工库导出（约 305 MB，已 .gitignore）
+│
+├── week25/         # 第三阶段 · RAG 系统与 Agent 工程化（检索进阶 / MCP / Deep Agents）
+│   ├── 20261109_RAG系统串讲.ipynb       — RAG 七步流水线串讲（加载→清洗→切块→嵌入→Chroma→检索→生成）
+│   ├── 20261109RAG/                    — 课堂材料（RAG1/RAG2 notebook、test1~test5、《峨眉山讲解词.docx》）
+│   ├── 20261111_RAG检索进阶串讲.ipynb   — 检索进阶串讲（Milvus 混合检索 / weighted·RRF / 精排 / MultiQuery / RAGAS）
+│   ├── 20261111/                       — 课堂代码 test1~test7 + ragas_test.py
+│   ├── 20261113_Agent与MCP串讲.ipynb    — Agent 工程化串讲（create_agent / 中间件 / MCP / Deep Agents / Skills）
+│   ├── 20261113/                       — 课堂材料（DeepAgents 课件、create_agent 与 MCP notebook、练习）
+│   ├── 20261113_lab/                   — 自建 MCP Server（FastMCP：Resource + Tool，stdio/SSE）
+│   ├── milvus/                         — Milvus 本地 compose（etcd / minio / milvus / attu）+ manage.ps1
+│   ├── stm32_rag/                      — STM32 多语料 RAG（CLI：inspect/build/stats/ask/eval/ingest/figures）
+│   ├── chroma_db/ · mineru_out/ · vendor/ — 向量库、MinerU 解析产物、CubeF1 源码（均 .gitignore）
+│   ├── MINERU.md                       — MinerU 上传通道说明
+│   └── _qa10.py / _qa10.md             — 十题实测脚本与记录（RM / DS / UM / HAL / 例程覆盖）
 │
 ├── env/            # Python 虚拟环境（已忽略）
 ├── .gitignore
@@ -1070,3 +1085,46 @@ D:\project\step1\env\python.exe pipeline_demo.py --camera 0
 - **目标**：输入经纬度与预报天数，用 Ed25519 私钥签发约 15 分钟有效的 JWT，向和风天气发 HTTPS GET，解析真实 JSON 并保存原始响应
 - **配置收口**：`config.json` 与 `keys/` 全部 `.gitignore`，仓库只留 `config.example.json`；`api_host` / `developer_id` / `project_id` / `credential_id` 四个值各不相同，API Key 不能当 Bearer token 用
 - **脚本分工**：`weather_tool.py keygen` 生成密钥对、查询与保存结果；`weather_langchain_tool.py` 把查询包装成 LangChain 工具，接入 11月2日的工具调用循环
+
+---
+
+### Week 25 — 第三阶段 · RAG 系统与 Agent 工程化（11.09 - 11.15）
+
+> **本周主线**：先把「外部知识」接进模型，再把「外部工具」标准化。前两天用《峨眉山讲解词》搭 RAG：1109 打通加载→清洗→切块→嵌入→Chroma→检索→生成七步；1111 只升级最弱的检索环节（Milvus 双字段、weighted/RRF 融合、Cross-Encoder 精排、MultiQuery 改写、RAGAS 评估）。第三天转向 Agent 工程化：`create_agent` 的最小循环与四类中间件、MCP 协议与自建 Server、Deep Agents 的虚拟文件系统/子代理/权限/人在回路/Skills。工程侧再把同一套方法用到 STM32 手册上，做成可路由、可评测的多语料知识库。运行环境统一 `week23/.venv` + `week23/.env`（`LLM_PROVIDER=qwen`），向量库用本地 Milvus（`milvus/docker-compose.yml`）。
+
+#### 11月9日 — RAG 七步流水线（20261109_RAG系统串讲.ipynb / 20261109RAG/）
+
+- **语料与切块**：《峨眉山讲解词.docx》7.39 万字，`RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=70)` + 中文标点作分隔符（默认只认英文 `\n\n` / `\n` / 空格，中文长段落几乎切不开）→ 201 块，平均 377 字
+- **七步流水线**：加载（`Docx2txtLoader`，另用两页 PDF 对照按页加载）→ 清洗（折行、空白、页眉页脚）→ 切块 → 嵌入（`text-embedding-v4`，1024 维，每批 10 条）→ Chroma 建库 → 检索（top-k + 相似度）→ 生成（正文 + 出处一起交给模型）
+- **出处是交付物**：回答末尾固定给「[n] 片段来源｜chunk_id」，后续所有检索升级都用「命中片段 / 答案 / 出处」三件套评估
+- **检索器转工具**：第 9 节把检索器包成 `@tool` 交给 Agent，观察模型自行决定「要不要检索、检索什么」，承接 week24 的工具调用
+- **离线可学**：`RUN_LIVE` / `RUN_EVAL` 默认关闭，加载、清洗、切块、评测数据校验全部不花钱可跑
+
+#### 11月11日 — 检索质量进阶（20261111_RAG检索进阶串讲.ipynb / 20261111/）
+
+- **只换检索**：语料、切块、生成全不动，效果差异才能归因到检索方法本身
+- **稠密 + 稀疏双路**：Milvus 3.0 服务化（gRPC 19530），dense 由客户端算、sparse 走服务端 `BM25BuiltInFunction(analyzer_params={"type": "chinese"})`；数字/专名靠 BM25，近义口语靠向量
+- **融合**：`WeightedRanker` 必须显式传 `ranker_type="weighted", ranker_params={"weights": [w1, w2]}`（不传会因默认权重个数不匹配报错）；RRF 走 `ranker_type="rrf", ranker_params={"k": 60}`；权重写 `[0,1]`/`[1,0]` 可近似关掉一路，单独观察稀疏与稠密
+- **精排**：DashScope `gte-rerank-v2` 当 Cross-Encoder 对 top-n 重打分，替代课堂本地 `rerank_qwen`
+- **查询改写**：MultiQuery 把一个问题扩成多条再合并，缓解口语问法与同义改写漏召回
+- **评估**：RAGAS `faithfulness` / `context_recall`；3 条标准问答均 1.0，把答案改成「海拔 4099 米」后 faithfulness 跌到 0.5 —— 一个可复现的幻觉对照
+- **版本坑**：`ragas 0.4.3` 在 notebook 里必须 `await metric.ascore(...)`，同步 `.score()` 只在普通脚本可用；`reranker=RRFRanker(60)` 新写法在 `langchain-milvus 0.4.0` + `pymilvus 3.0.3` 报 `AttributeError: 'RRFRanker' object has no attribute 'type'`
+
+#### 11月13日 — Agent 工程化：create_agent / MCP / Deep Agents（20261113_Agent与MCP串讲.ipynb / 20261113/）
+
+- **`create_agent` 循环**：`AIMessage.tool_calls` → 执行工具 → `ToolMessage` 回填 → 再问模型，直到没有 `tool_calls`；课堂 `test1.py` 用手写 `hook` 回调演示同一结构，中间件就是 Agent 世界的 `hook`
+- **结构化输出三档**：Prompt + `JsonOutputParser`（最弱）→ `ToolStrategy` / `with_structured_output(method="function_calling")`（要模型支持工具调用）→ `ProviderStrategy` / `response_format={"type": "json_schema"}`（**要厂商在推理层支持**）
+- **四类中间件**：`@wrap_model_call` 做重试/降级（`request.override(model=...)`）/改写响应；`@wrap_tool_call` 做日志计时、失败重试、权限黑名单（构造 `ToolMessage` 时 **`tool_call_id` 必填**）、结果缓存；`SummarizationMiddleware` 按消息数或 token 压历史；`@dynamic_prompt` 按 state / `runtime.context` 改系统提示
+- **MCP**：Host–Client–Server 三角色，消息走 JSON-RPC 2.0（请求 / 响应 / **通知无 `id`**），传输分 SSE 与 Stdio（Stdio 会在客户端本机起子进程，是安全隐患）；示例用**自建图书馆 Server**（`20261113_lab/mcp_library_server.py`：Resource 放规则与档案、Tool 放查库存与借书），客户端 `get_tools()` 与 `session().read_resource()` 两条路都走通
+- **Deep Agents**：只传 `model` 的 bare stack 已自带 `FilesystemMiddleware` + `SubAgentMiddleware`（`task`），但 `write_todos` 从 0.7 起要自己加 `TodoListMiddleware`；backend 按边界选 State / Filesystem / Store / Composite / Sandbox；`permissions` 先匹配先生效、无命中即允许；`interrupt_on` 四种决定 `approve` / `edit` / `reject` / `respond`
+- **Skills**：`skills=` 必须指向**集合目录**（指向 `SKILL.md` 那一层则一份都加载不到），三级加载 = 元数据（启动）/ 正文（调用时 `read_file`）/ `scripts|references|assets`（正文点名才读）；`description` 里的触发词是模型唯一能看见的句子；自定义子代理不继承主代理的 skills；有 checkpointer 时改技能要传 `skills_metadata=None` 重扫（`[]` 表示「零份技能」）
+- **本机实测 5 个坑**：`ProviderStrategy` 在 qwen3.8-flash 网关报 `StructuredOutputValidationError`；Jupyter 里 stdio MCP 因 `sys.stderr` 无 `fileno` 报 `UnsupportedOperation`（把 `errlog` 换成 `os.devnull`）；`StoreBackend` 必须显式传 `namespace`；`permissions` 路径必须以 `/` 开头；`max_tokens=1024` 会把长输出截断成「最后一条消息为空、写入文件没发生」
+
+#### 工程实践 — STM32 多语料 RAG 知识库（stm32_rag/ · milvus/ · MINERU.md）
+
+- **语料**：RM0008 参考手册（1133 页 / 12.5 MB）、DS F103x8B 数据手册、UM1850 HAL 手册，以及 `vendor/STM32CubeF1` 的 HAL 源码（61 个 `.c` + 67 个 `.h`）与 Nucleo 例程
+- **按语法单元切**：HAL 源码切成 函数 889 / typedef 241 / 宏组 1057 共 2187 块；UM1850 按「符号 + Function name」一函数一块；PDF 用书签切小节（RM0008 解析出 1334 个），表格转 Markdown、插图按 `Figure N.` 裁成 PNG 单独建块
+- **跨集合路由**：`router.py` 规则分流（符号 → hal/um/examples；寄存器 → rm/hal；型号与电气参数 → ds/rm/hal），源内 RRF → 跨源加权二次 RRF（1.0/0.6/0.4/0.3/0.2）→ 统一 LLM 重排；问「函数」时给 `kind=function` 加分
+- **评测**：`eval_cases_multi.json` 8 题跨 RM/DS/HAL/例程，全中 100%、覆盖 100%、MRR 1.000；单语料 RM0008 20 题同样满分
+- **上传通道**：`python -m stm32_rag ingest <pdf>` 走 MinerU（`127.0.0.1:15980`）→ Markdown → `loader_md` → Chroma，来源自动注册进 `chroma_db/custom_sources.json`，router 按权重 0.8 纳入并保底 1 个重排候选
+- **踩过的坑**：不加来源权重时例程库会把 HAL 函数挤出重排池；UM 入库后代码类问题被 `LL_GPIO_SetOutputPin` 抢走 → 代码类路由改为 `hal → um → examples`；Chroma 1.5 多集合并发读偶发 `hnsw segment reader: Nothing found on disk` → 共享 `PersistentClient` + 缓存句柄并降级 BM25
