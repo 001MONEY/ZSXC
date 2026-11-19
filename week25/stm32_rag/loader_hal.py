@@ -93,8 +93,14 @@ def _scan_units(lines: list[str], name_re: re.Pattern[str] = _SIG_RE) -> list[_U
                 while j < n and "{" not in lines[j] and ";" not in lines[j] and j - i < 8:
                     j += 1
                 if j < n and "{" in lines[j] and ";" not in lines[j]:
+                    # 用大括号配对找函数结束。原来是「第一个 strip()=='}' 的行」，
+                    # 会被函数体里任何缩进的 } 提前截断（HAL_UART_Init 只剩前 700 字符）。
                     k = j
-                    while k < n and lines[k].strip() != "}":
+                    depth = 0
+                    while k < n:
+                        depth += lines[k].count("{") - lines[k].count("}")
+                        if depth <= 0 and k > j:
+                            break
                         k += 1
                     if k < n:
                         units.append(_Unit("function", match.group(1), i, k, _comment_above(lines, i)))

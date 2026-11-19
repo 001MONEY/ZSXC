@@ -219,6 +219,73 @@ def rerank_hits(llm, query: str, hits: list[Hit]) -> list[Hit]:
     return sorted(hits, key=sort_key, reverse=True)
 
 
+class GraphExpander:
+    """文档图谱扩展：种子块 → 共同符号 → 跨语料邻块。
+
+    - 只在 `cfg.graph_expand` 打开时工作（默认关，避免没建图时拖慢检索）；
+    - Neo4j 不可用 / 图与语料不同步时静默跳过：图谱是增强，不是依赖；
+    - 扩展块同样算进 `max_context_tokens` 预算。
+    """
+
+    def __init__(self, lookup) -> None:
+        self._lookup = lookup
+        self._store = None
+        self._checked = False
+        self.last_added = 0
+
+    def expand(self, hits: list[Hit], cfg: RetrieveConfig) -> list[Hit]:
+        self.last_added = 0
+        if not getattr(cfg, "graph_expand", False) or not hits:
+            return hits
+
+        if self._store is None and not self._checked:
+            self._checked = True  # 只探测一次，Neo4j 没起就不再重试
+            try:
+                from .graph_docs import doc_graph
+
+                self._store = doc_graph()
+            except Exception:
+                self._store = None
+        if self._store is None:
+            return hits
+
+        try:
+            rows = self._store.expand_from(
+                [hit.id for hit in hits],
+                per_symbol=int(getattr(cfg, "graph_per_symbol", 2)),
+                limit=int(getattr(cfg, "graph_max_extra", 6)),
+            )
+        except Exception:  # 图谱查询失败不能把整个检索搞挂
+            return hits
+
+        used = sum(int(hit.metadata.get("tokens", 0) or 0) for hit in hits)
+        present = {hit.id for hit in hits}
+        extra: list[Hit] = []
+        for row in rows:
+            chunk_id = row.get("chroma_id")
+            if not chunk_id or chunk_id in present:
+                continue
+            found = self._lookup(chunk_id, row.get("source"))
+            if found is None:
+                continue  # 重建索引后没重建图，旧 id 直接跳过
+            text, meta = found
+            size = int(meta.get("tokens", 0) or 0)
+            if used + size > cfg.max_context_tokens:
+                continue
+            present.add(chunk_id)
+            used += size
+            extra.append(
+                Hit(
+                    id=chunk_id,
+                    text=text,
+                    metadata={**meta, "graph_expanded": True, "graph_via": row.get("symbol", "")},
+                    expanded=True,
+                )
+            )
+        self.last_added = len(extra)
+        return hits + extra
+
+
 class HybridRetriever:
     def __init__(
         self,
@@ -233,6 +300,15 @@ class HybridRetriever:
         self.store = store or CorpusStore(self.index)
         self._corpus: _Corpus | None = None
         self._bm25: BM25 | None = None
+        self._graph = GraphExpander(self._lookup)
+
+    # ------------------------------------------------------------ 图谱扩展
+    def _lookup(self, chunk_id: str, source: str | None = None) -> tuple[str, dict] | None:
+        corpus = self.ensure_ready()
+        index = corpus.by_id.get(chunk_id)
+        if index is None:
+            return None
+        return corpus.texts[index], corpus.metas[index]
 
     # ------------------------------------------------------------ 准备
     def ensure_ready(self) -> _Corpus:
@@ -393,6 +469,7 @@ class HybridRetriever:
         # 而它剩下的块本来就会被邻居补全拉进来
         top = self._collapse_sections(pool)[: cfg.final_k]
         expanded = self._expand(top, cfg.max_context_tokens)
+        expanded = self._graph.expand(expanded, cfg)
         return self._limit_per_section(expanded, cfg.max_per_section)
 
     @staticmethod

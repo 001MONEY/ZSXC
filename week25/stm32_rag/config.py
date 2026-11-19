@@ -76,6 +76,12 @@ CUSTOM_SOURCES_FILE = Path(
     os.getenv("STM32_CUSTOM_SOURCES", str(DB_DIR / "custom_sources.json"))
 ).expanduser()
 
+# ---- 知识图谱（Neo4j）：器件事实图谱，与向量库互补 ----
+NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "neo4j123456")
+NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")
+
 # ---------------------------------------------------------------- 模型
 EMBED_MODEL = os.getenv("STM32_EMBED_MODEL", "text-embedding-v4")
 EMBED_DIM = int(os.getenv("STM32_EMBED_DIM", "1024"))
@@ -160,7 +166,29 @@ class RetrieveConfig:
     use_rerank: bool = True  # LLM 重排开关
     expand_neighbors: bool = True  # 同一小节相邻块补全
     max_context_tokens: int = 6000  # 拼进 Prompt 的正文上限
+    # ---- 文档知识图谱（GraphRAG，需先 graph-docs --build）----
+    graph_expand: bool = False  # 按符号做跨语料扩展（默认关，开前先建图）
+    graph_per_symbol: int = 2  # 每个符号最多带几块
+    graph_max_extra: int = 6  # 最多新增几块
 
+
+# ---------------------------------------------------------------- Keil / 工程生成
+# UV4.exe 是 GUI 程序：命令行构建必须同步等待进程结束，
+# 并且工程文件要存成 UTF-8 无 BOM，否则 UV4 直接 exit 15 且不写日志。
+UV4_PATH = Path(os.getenv("STM32_UV4", r"C:\Keil_v5\UV4\UV4.exe")).expanduser()
+BUILD_TIMEOUT = int(os.getenv("STM32_BUILD_TIMEOUT", "600"))  # 秒
+# 命令行构建时若已有 μVision 实例占用工程，UV4 会静默失败；默认先结束残留进程
+KILL_STALE_UV4 = (os.getenv("STM32_KILL_STALE_UV4") or "1").strip() == "1"
+
+# 交付目录：每个需求一个子目录（工程 + 编译日志 + 修改记录）
+WORKSPACE_ROOT = Path(
+    os.getenv("STM32_WORKSPACE_DIR", str(PROJECT_DIR / "workspaces"))
+).expanduser()
+
+# 生成的工程默认面向 Cortex-M3 / STM32F103，HSE 8 MHz（Nucleo 板载 ST-Link MCO）
+DEFAULT_DEVICE = os.getenv("STM32_DEVICE", "STM32F103RB")
+DEFAULT_SYSCLK = int(os.getenv("STM32_SYSCLK", "72000000"))
+DEFAULT_HSE = int(os.getenv("STM32_HSE", "8000000"))
 
 # ---------------------------------------------------------------- 模型工厂
 def _lab_config():
@@ -232,5 +260,7 @@ def describe() -> str:
         f"嵌入模型   : {EMBED_MODEL} / {EMBED_DIM} 维\n"
         f"对话模型   : {model}\n"
         f"插图目录   : {FIGURES_DIR}\n"
+        f"Keil UV4   : {UV4_PATH}\n"
+        f"交付目录   : {WORKSPACE_ROOT}\n"
         f"模型配置   : {LAB_CONFIG_DIR}"
     )

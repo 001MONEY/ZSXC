@@ -1,242 +1,635 @@
-# stm32_rag —— STM32F10xxx 参考手册（RM0008）RAG
+# STM32 AI 开发助手（`stm32_rag`）
 
-把 `STM32F10xxx参考手册（英文）.pdf`（1133 页）做成可检索、可溯源的知识库。
-嵌入与生成都走云端：`text-embedding-v4` 做嵌入（1024 维），`kimi-k3.1-pro` 做生成与重排，
-配置统一从 `week23/.env` 读取，代码里不出现明文 Key。
+把一句中文需求，变成**可编译的 STM32F103 工程**；写代码之前，先用手册和 HAL 源码把参数核对清楚。
 
-## 一、和之前那套切法的区别
+它由两部分组成，共用一套知识库：
 
-| 环节 | 通用做法（`RAG2.ipynb`） | 本模块 |
-| --- | --- | --- |
-| 加载 | `PyMuPDFLoader` 每页一个 Document | 用 1623 条书签当锚点，按 y 坐标把小节切开，一页多个小节也能分开 |
-| 清洗 | 中文折行正则 | 英文折行 + 连字符断词 + 页眉页脚（`DocID…` / `RM0008` / `x/1133`）按坐标裁掉 |
-| 表格 | 纯文本抽出，位表变成 `31 30 29 … rw rw` | `find_tables()` 转 Markdown 表格，并剔除被表格覆盖的碎文本 |
-| 插图 | 完全看不到 | `Figure N.` 题注定位 → 矢量图裁成 PNG → 建成 `kind=figure` 的块；命中后由 `--with-figures` 把原图发给视觉模型 |
-| 切块 | `chunk_size=50` 字符 | tiktoken 计数、480 token/块、段落装包、表格原子不切、短节前后合并 |
-| 噪声 | 全部入匓 | 整章排除 `Revision history`（24 页改版记录，只会污染召回） |
-| 检索 | 纯向量 top-3 | 向量 + BM25 双路 RRF → LLM 重排 → 按小节奏扑（每节先留最相关一块）→ 前后块补全 |
-| 型号 | — | 识别 F101~104 / F105~107，优先对应密度章节（同一寄存器两章各有一份） |
-| 元数据 | `source/page` | 章节号、章节路径、器件密度、页码区间、块序号、是否含表、寄存器符号 |
-
-## 二、目录
+- **知识库（RAG）**：RM0008 参考手册、数据手册、UM1850 HAL 说明书、HAL 源码、Nucleo 例程，
+  混合检索 + 路由 + LLM 重排，回答带页码/文件出处；
+- **开发助手**：需求分析 → 规格校验 → 代码生成 → Keil 编译 → 错误修复 → 交付报告，
+  既能从零建工程，也能在 CubeMX 工程上做增量修改。
 
 ```text
-stm32_rag/
-  config.py      # 路径、模型、建库/检索参数（改这里就够）
-  cleaner.py     # 英文排版清洗
-  loader.py      # PDF → 按书签切小节 + 表格转 Markdown
-  chunker.py     # 小节 → token 装包切块
-  index.py       # Chroma 建库（显式向量、分批、可断点续跑）
-  retrieve.py    # BM25 + 向量 + RRF + LLM 重排 + 邻居补全
-  answer.py      # Prompt 与带出处的答案
-  evaluate.py    # 锚点式评测（命中率 / 覆盖率 / MRR）
-  cli.py         # 命令行
-  eval_cases.json
+自然语言需求
+   │
+   ▼
+Agent / Orchestrator ──► STM32 RAG（RM0008 / DS / UM1850 / HAL / 例程）
+   │                 ├─► 工程分析（.uvprojx / 源码 / 启动文件 / .ioc）
+   │                 ├─► 代码生成（时钟 / GPIO / TIM / USART / DMA / NVIC）
+   │                 └─► Keil MCP Server（工程操作 / 编译 / 日志分析）
+   ▼
+Keil MDK-ARM（UV4 命令行编译）
+   ▼
+交付：源码 + 工程配置 + 编译日志 + 报告 + 修改记录
 ```
 
-## 三、命令
+---
+
+## 1. 快速开始
+
+### 1.1 环境
+
+| 依赖 | 位置 | 说明 |
+| --- | --- | --- |
+| Python | `d:\project\step1\week23\.venv` | langchain / chromadb / pymilvus 等都装在这里 |
+| 模型配置 | `week23/.env` | 百炼 `text-embedding-v4`（1024 维）+ `kimi-k3.1-pro` |
+| Keil | `C:\Keil_v5\UV4\UV4.exe` | 命令行构建，可用 `STM32_UV4` 覆盖 |
+| 知识库 | `chroma_db/` | 没有就按第 7 节建库 |
+| 图谱（可选） | `../neo4j`（端口 7687） | 器件事实图 `graph` + 文档关系图 `graph-docs`；不启动也能跑，只是少了 `graph`/`--graph-expand` 能力 |
 
 ```powershell
-# 0. 体检：解析全本，打印小节数、块数、章节分布，不写库
-python -m stm32_rag inspect
-
-# 1. 先小范围试跑（第 9 章 GPIO 附近），确认切块与检索正常
-python -m stm32_rag build --pages 160-200 --collection stm32_smoke --rebuild
-
-# 2. 全量建库（首次解析约 16 分钟，后续走缓存秒开；向量化约 150 秒，可重复执行）
-#    --rebuild 会先写进 <集合名>__rebuild，写完后才替换旧集合；解析/嵌入中途失败不会弄挂现有库
-python -m stm32_rag build --rebuild
-
-# 3. 看库状态
-python -m stm32_rag stats
-
-# 4. 提问（默认带重排；加 --with-figures 把命中插图一并发给视觉模型）
-python -m stm32_rag ask "看 Figure 8 的时钟树，SDIO 的时钟怎么来？" --with-figures
-
-# 5. 只看插图抽取（调试用）
-python -m stm32_rag figures --show 10
-
-# 6. 评测（--check 会先校验题目里的锚点是否真在语料中）
-python -m stm32_rag eval --check
+& d:\project\step1\week23\.venv\Scripts\Activate.ps1
+cd d:\project\step1\week25
+python -m stm32_rag --help
 ```
 
-## 四、实测数据
+> 如果 `python` 不识别，直接写全路径：
+> `& 'd:\project\step1\week23\.venv\Scripts\python.exe' -m stm32_rag ...`
 
-| 指标 | 数值 |
-| --- | --- |
-| 页数 / 体积 | 1133 页 / 12.5 MB |
-| 书签 | 1623 条（5 级），过滤图表标题后用作锚点 |
-| 解析出的小节 | 1334 个（印刷页 40–1133，目录页与 Revision history 已排除） |
-| 转成 Markdown 的表格 | 474 张 |
-| 切块 | **2016 块**正文 + **364 块**插图 = 2380 块，538 块含表格 |
-| 插图 | 364 张 PNG（20 MB），按 150 dpi 从矢量图裁出 |
-| 建库耗时 | 首次解析 979 s + 向量化写入 146 s（8 并发）；之后走解析缓存 |
-| 评测（20 题，锚点+MRR） | 全中 **100%**，平均覆盖 97.5%，MRR **1.000**（kimi 重排） |
+### 1.2 三条最常用的命令
 
-评测口径：锚点尽量收紧到“寄存器名 + 位域名”（如 `RCC_APB2ENR` + `IOPAEN`），
-只提到寄存器名、没有位定义的片段不再能拿到分。评测与 `answer()` 用**同一份证据列表**，
-不在评测侧另行截断 `k`，否则分数和实际进 Prompt 的内容对不上。
+```powershell
+# 1) 从零生成一个新工程（不需要 CubeMX，自动拷 CMSIS/启动文件/HAL）
+python -m stm32_rag develop "配置 PA8 输出 1MHz PWM，占空比 50%" --workspace workspaces/pwm_pa8
 
-命令行的实测样例：
+# 2) 在已有 CubeMX 工程上增量修改（自动识别 .ioc，不覆盖原代码）
+python -m stm32_rag develop "USART1 115200 每秒打印 Hello" --workspace "E:\Codex\...\STM32F103C8T6_Base"
 
-```text
-> python -m stm32_rag ask "GPIOx_CRL 的地址偏移和复位值分别是多少？"
-【答】GPIOx_CRL 的地址偏移为 0x00，复位值为 0x4444 4444 [1]。
-【出处】[1] … > 9.2.1 Port configuration register low (GPIOx_CRL) (x=A..G)｜p.170
+# 3) 需求说法比较自由时用 LLM 编排（失败自动回退到 develop）
+python -m stm32_rag agent "让 PC13 每 500ms 翻转一次" --workspace workspaces/led_demo
 ```
 
-## 五、当成库用
+### 1.3 三种调用方式
+
+| 入口 | 怎么用 | 适合 |
+| --- | --- | --- |
+| 命令行 | `python -m stm32_rag <子命令>` | 日常、脚本、CI |
+| MCP | VS Code / Claude 里自然语言调 `keil_*` 工具 | 在 IDE 里边看代码边改（配置见第 9 节） |
+| 代码库 | `from stm32_rag import develop, DevAssistant` | 二次开发、批量任务 |
+
+`develop` 与 `agent` 的分工：前者是规则解析，不花 token、结果可复现；
+后者让模型理解更自由的说法，但**落盘和编译始终走同一套工具**，模型不能绕过校验。
+
+### 1.4 当成库用
 
 ```python
-from stm32_rag import Stm32Index, HybridRetriever, answer
+from stm32_rag import answer, develop, DevAssistant, HybridRetriever, Stm32Index
 
-index = Stm32Index()
-index.build()                     # 首次；之后重复执行只补新增块
-
-retriever = HybridRetriever(index=index)
+# 知识库问答
+retriever = HybridRetriever(index=Stm32Index())
 result = answer("USART 波特率怎么算？", retriever=retriever)
 print(result.text)
 print("\n".join(result.sources()))
+
+# 开发助手（确定性 / LLM）
+delivery = develop("配置 PA8 输出 1MHz PWM", workspace=r"D:\tmp\pwm_demo")
+print(delivery.summary())
+
+assistant = DevAssistant(workspace=r"D:\tmp\pwm_demo")
+print(assistant.run("再把占空比改成 30%").summary())
 ```
 
-只想要检索结果：
+### 1.5 一次运行长什么样
 
-```python
-from stm32_rag import HybridRetriever
-hits = HybridRetriever().search("RCC_APB2ENR", )
-for h in hits:
-    print(h.label, h.vector_rank, h.bm25_rank, h.rerank_score)
+```text
+> python -m stm32_rag develop "配置 PA8 输出 1 MHz PWM，占空比 50%"
+
+需求：配置 PA8 输出 1 MHz PWM，占空比 50%
+✅ 编译通过（退出码 0：无错误、无警告）
+Program Size: Code=7752 RO-data=304 RW-data=12 ZI-data=1108
+产物: ...\MDK-ARM\Objects\stm32f103rb-pwm_pa8.axf
+工程：...\MDK-ARM\stm32f103rb-pwm_pa8.uvprojx
+报告：...\REPORT.md
+修改记录：...\CHANGES.md
 ```
 
-## 六、关键参数在哪调
+生成的关键代码：
 
-`config.py`：
+```c
+htim1.Init.Prescaler = 0;      /* ÷1 */
+htim1.Init.Period    = 71;     /* 72 MHz / 72 = 1 MHz */
+sConfigOC.Pulse      = 36;     /* 36/72 = 50% */
+HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+```
 
-- `BuildConfig.max_tokens / overlap_tokens`：块大小。手册公式多、表格多，480 token 比较稳；
-  调大召回更完整但精度下降。
-- `BuildConfig.min_tokens`：小节小于这个值会尝试并入相邻小节（只允许并入同级或更细的小节）。
-- `BuildConfig.exclude_chapter_patterns`：整章排除的正则，默认剔除 `Revision history`。
-- `RetrieveConfig.vector_k / bm25_k`：两路召回条数。
-- `RetrieveConfig.final_k`：进入 Prompt 的**小节数**，默认 6；每个小节再由邻居补全扩成 1~3 块。
-- `RetrieveConfig.max_per_section`：单个小节最多保留几块（默认 3）。寄存器位定义表常跨 3 块，
-  调到 2 会让 `PLLMUL=0111` 这类编码表掉出去。
-- `RetrieveConfig.max_context_tokens`：拼进 Prompt 的正文上限，默认 6000。
-- `RetrieveConfig.max_figures_in_context`：上下文里最多保留几张插图（默认 2），
-  问题里点名的图不受限；不设上限的话 364 个图块会挤掉寄存器题的正文证据。
-- `RetrieveConfig.device_boost`：按问题里的型号（F101~104 / F105~107）优先对应密度章节。
-- `RetrieveConfig.use_rerank`：LLM 重排开关。关掉更快，命中率约掉 5 个点。
-- `RetrieveConfig.expand_neighbors`：把同一小节的**后一块优先、前一块其次**补进来，
-  解决表格/列表被切在块边界的问题。
+`REPORT.md` 会把账算给你看：
 
-`.env`（week23）：
+```text
+- PA8 → TIM1_CH1；TIM1CLK = PCLK2×1 = 72 MHz（APB2）；
+  PSC=0（分频 1）ARR=71（周期 72）CCR=36 → 实际 1000 kHz，误差 +0.000%
+- USART1：PCLK=72 MHz，BRR=0x271，实际 115207.5 bps（误差 +0.18%）
+```
 
-- `CHAT_MODEL`：生成与重排用的对话模型，默认 `kimi-k3.1-pro`；换模型只改这一行。
-- `DASHSCOPE_API_KEY / DASHSCOPE_BASE_URL`：对话模型走的百炼兼容接口。
-- 嵌入模型由 `STM32_EMBED_MODEL` 控制（默认 `text-embedding-v4`），**换它必须换集合名重建**。
+---
 
-## 七、已知边界
+## 2. 能力总览
 
-1. **图里的文字没做 OCR**：插图只按“题注 + 章节 + 页码”建块，图内的信号名/数值要靠
-   `--with-figures` 现场看图；插图多的时候每次问答会多 1~2k token。
-2. **跨页表格**：寄存器表一页放不下时会被拆成两张表，第二张没有表头；靠邻居补全缓解。
-3. **目录页与改版记录已跳过**：PDF 前 39 页是点线目录，第 32 章是 Revision history，都不建库。
-4. **嵌入维度固定**：集合用 1024 维建库，换 `STM32_EMBED_MODEL`/`STM32_EMBED_DIM` 必须换集合名重建。
-5. **答案里可能出现“资料中未给出该编码”**：这是故意的——宁可说没给，也不让模型推算位域编码。
+| 能力 | 需求示例 | 状态 |
+| --- | --- | --- |
+| GPIO 输出 | `PC13 每 500ms 翻转` | ✅ |
+| GPIO 输入 / 外部中断 | `按键接 PA0，下降沿中断` | ✅（无消抖组件） |
+| TIM PWM | `PA8 输出 1MHz PWM` | ✅ 单通道/定时器 |
+| TIM 更新中断 | `TIM2 产生 1kHz 中断，翻转 PA5` | ✅ |
+| USART 发送 | `USART1 115200 每秒打印 Hello` | ✅ 轮询 / DMA |
+| USART 接收 / 命令行 | — | ❌ 待做 |
+| ADC（电位器） | — | ❌ 待做 |
+| I2C / SPI（OLED 等） | — | ❌ 待做 |
+| 编码器 / 输入捕获 | — | ❌ 待做 |
 
-## 八、多语料：HAL 源码 / UM1850 / 数据手册
+工程类型：
 
-`build` 与 `inspect` 都支持 `--source`，各来源写进独立集合：
+| 类型 | 入口 | 说明 |
+| --- | --- | --- |
+| 新建工程 | `develop` / `scaffold` | 从 vendor 拷 CMSIS + HAL，生成可直接编译的 `.uvprojx` |
+| CubeMX 工程 | `develop` / `agent` | 读 `.ioc`，只往 USER CODE 段增量插入 |
+| 已有工程 | `compile` / `project` | 编译、看结构、加文件/宏/头文件路径 |
+
+---
+
+## 3. 架构与模块
+
+| 能力 | 模块 | 职责 |
+| --- | --- | --- |
+| 手册知识库 | `loader*.py` / `chunker.py` / `index.py` | PDF/源码/例程 → 切块 → Chroma |
+| 混合检索 | `retrieve.py` / `router.py` / `answer.py` | 向量 + BM25 → RRF → LLM 重排 → 带出处回答 |
+| 器件事实库 | `mcu.py` | 引脚复用、DMA 映射、TIMxCLK、PSC/ARR、UART BRR |
+| 工程分析 | `project.py` | 读写 `.uvprojx`：器件/分组/文件/宏/头文件路径 |
+| 代码生成 | `codegen.py` | 先校验再生成 `main.c / main.h / stm32f1xx_it.c` |
+| 工程脚手架 | `scaffold.py` | 从 vendor 生成可编译工程（HAL 按模块裁剪） |
+| 编译诊断 | `keil.py` | `UV4 -b`、日志解析、错误→修复动作映射 |
+| 确定性编排 | `pipeline.py` | 需求解析 → 生成 → 编译 → 自修复 → 报告 |
+| LLM 编排 | `agent.py` + `tools.py` | LangChain `create_agent`，7 个工具 |
+| CubeMX 兼容 | `cubemx.py` | 解析 `.ioc`、增量插入、多轮规格累积 |
+| MCP Server | `mcp_keil_server.py` | 11 个 MCP 工具 |
+| CLI | `cli.py` | 全部子命令入口 |
+
+---
+
+## 4. 代码生成：先校验，再下笔
+
+`codegen.validate()` 在写文件前拦下这些问题（校验不过不产生任何代码）：
+
+| 检查 | 例子 |
+| --- | --- |
+| 封装有没有这个端口 | STM32F103RB 是 64 脚，没有 GPIOE |
+| 引脚复用对不对 | PA8 只有 TIM1_CH1，要求 TIM3 会报“可用：TIM1_CH1” |
+| 频率能不能分出来 | PSC/ARR 都是 16 位，1 MHz 与 1 Hz 的预算不同 |
+| 占空比范围 | 0~100%，CCR 会夹在 0~ARR+1 |
+| UART 引脚匹配 | USART1 的 TX/RX 必须是 PA9/PA10（重映射要另改 AFIO） |
+| 波特率误差 | BRR 误差 > 3% 给警告 |
+| DMA 映射存在 | USART1_TX 只能是 DMA1_Channel4 |
+| 定时器时钟来源 | TIM1 挂 APB2；TIM2~4 挂 APB1，APB1 分频≠1 时 ×2 |
+
+生成的代码沿用 CubeMX 命名（`MX_xxx_Init` / `HAL_xxx_MspInit`），和 UM1850、HAL 源码里的函数名一一对应，检索到的资料可以直接验证。
+
+---
+
+## 5. 编译闭环
+
+### 5.1 UV4 命令行的六个坑
+
+1. **UV4 是 GUI 程序**：`&` / Popen 不会等它结束，必须同步等待并读退出码，否则永远读到上一次的日志；
+2. **工程文件带 UTF-8 BOM 会 exit 15**：不编译、不写日志。`KeilProject.save()` 固定写无 BOM；
+3. **`<Define>` 用逗号分隔**（`USE_HAL_DRIVER,STM32F103xB`），**`<IncludePath>` 用分号**；
+4. **μVision 正占用工程时命令行构建静默失败**：拿不到日志时会结束残留 `UV4.exe` 重试一次（`STM32_KILL_STALE_UV4=0` 可关闭）；
+5. **`UV4 -r` 会拉起 GUI 卡住**：全量重编改成删 `Objects/*.o` 再 `-b`；
+6. **日志里的错误行是 include 链**，用 `.....` 串联，要按 `....` 切分取最深一段。
+
+退出码对照（`keil.EXIT_CODES`）：
+
+| 码 | 含义 |
+| --- | --- |
+| 0 / 1 | 无错误无警告 / 仅有警告（都算通过） |
+| 2 / 3 | 有错误 / 致命错误 |
+| 11 / 15 / 20 | 打不开工程 / 读取工程失败（BOM、被占用）/ License |
+
+### 5.2 错误 → 修复建议 → 重编译
+
+`keil.suggest_fixes()` 把常见错误映射成动作，`develop` 自动跑最多 `--max-fix` 轮：
+
+| 现象 | 自动动作 |
+| --- | --- |
+| `Please select first the target STM32F1xx device` | 加宏 `STM32F103xB` |
+| `stm32f1xx_hal.h: No such file` | 加头文件路径 `..\Drivers\STM32F1xx_HAL_Driver\Inc` |
+| `Undefined symbol HAL_TIM_PWM_Init` | 补 `stm32f1xx_hal_tim.c` + 打开 `HAL_TIM_MODULE_ENABLED` |
+| `Undefined symbol SystemInit` | 把 `system_stm32f1xx.c` 加进工程 |
+| `use of undeclared identifier 'HAL_'` | 加宏 `USE_HAL_DRIVER` |
+| `No space in execution regions` | 标记人工处理（裁剪功能或换型号） |
+
+语法/逻辑错误不在自动修复范围内——那属于 Agent 用 `read_source` + `write_source` 逐处修改、再编译验证的场景。
+
+---
+
+## 6. 在 CubeMX 工程上增量修改
+
+CubeMX 的 `main.c / stm32f1xx_hal_msp.c / stm32f1xx_it.c` 里有 `/* USER CODE BEGIN/END */` 和已生成的
+`MX_GPIO_Init` / `HAL_MspInit`。直接整文件生成会丢掉这些，所以助手识别到 `.ioc` 会自动切到增量模式。
+
+### 6.1 处理规则
+
+| 需求 vs `.ioc` 现状 | 处理方式 |
+| --- | --- |
+| 引脚/外设未配置 | 生成 `MX_xxx_Init`，插进 USER CODE 段，调用加到 `USER CODE 2` |
+| 串口已配置，要求改波特率 | 改 `huart1.Init.BaudRate`，同步 `.ioc` 的 `USART1.BaudRate` |
+| 引脚已配成同一信号 | 跳过，不重复生成 |
+| 引脚已被别的信号占用 | 报冲突并列出实际信号，不猜 |
+| 定时器已是 CubeMX 外设 | 不重复初始化 |
+| USER CODE 标记被手工删掉 | 拒绝自动改，提示改用 `read_source` + `write_source` |
+
+生成代码用标记包起来，重复执行是替换而不是叠加：
+
+```c
+/* stm32_rag:functions:BEGIN */
+static void MX_TIM1_Init(void) { ... }
+/* stm32_rag:functions:END */
+```
+
+### 6.2 为什么用「内联 MSP」
+
+CubeMX 已经把 `HAL_TIM_Base_MspInit` / `HAL_UART_MspInit` 写在 `stm32f1xx_hal_msp.c`，
+再定义一次就是重复符号。增量模式把时钟使能与引脚复用写进 `MX_xxx_Init()`，不碰 MSP 回调。
+
+### 6.3 多轮需求是累积的
+
+规格会合并到 `<工程>/.stm32rag/spec.json` 再整体重算，同键覆盖、其余保留：
+
+```text
+第 1 轮  配置 PA8 输出 1MHz PWM        → Code=4268
+第 2 轮  USART1 115200 每秒打印 Hello  → Code=7412（PWM 仍在）
+第 3 轮  把 USART1 波特率改成 9600     → Code=7412（PWM 仍在）
+```
+
+想从零重来：删掉 `.stm32rag/`，或在 CubeMX 里重新生成工程。
+
+> 助手**不回写 `.ioc`**（除波特率字段）。CubeMX 重新生成会保留 USER CODE，代码不丢，
+> 但图形界面里看不到助手新增的外设。要图形化维护，建议外设也在 CubeMX 里配好。
+
+---
+
+## 7. 知识库（RAG）
+
+### 7.1 语料与集合
 
 | 来源 | 内容 | 集合 | 命令 |
 | --- | --- | --- | --- |
 | `rm` | RM0008 参考手册（寄存器级） | `stm32_rm0008_text_embedding_v4` | `build --source rm --rebuild` |
 | `ds` | STM32F103x8/B 数据手册 | `stm32_ds_f103xb_text_embedding_v4` | `build --source ds` |
-| `um` | UM1850 HAL/LL 驱动说明书（1208 页，切出 **2591 块 / 60 章**） | `stm32_um1850_v3_text_embedding_v4` | `build --source um` |
-| `hal` | STM32F1xx HAL 驱动源码（`.c/.h`，889 函数 / 241 类型 / 1057 宏组） | `stm32f1_hal_v1110_text_embedding_v4` | `build --source hal` |
+| `um` | UM1850 HAL/LL 说明书（2591 块 / 60 章） | `stm32_um1850_v3_text_embedding_v4` | `build --source um` |
+| `hal` | F1 HAL 源码（889 函数 / 241 类型 / 1057 宏组） | `stm32f1_hal_v1110_text_embedding_v4` | `build --source hal` |
 | `examples` | Nucleo 例程 `main.c`（180 块） | `stm32f1_hal_examples_text_embedding_v4` | `build --source examples` |
 
-切法差异：
+### 7.2 切块与检索
 
-- **源码**（`loader_hal.py`）：按语法单元切——函数 = 前置 Doxygen 注释 + 签名 + 函数体；结构体/枚举整块；连续 `#define` 按 380 token 预算合并成组。每块带 `symbol / module / file / lines / kind`，并补一行自然语言摘要（`GPIO 模块的函数 HAL_GPIO_Init：...`）帮助中文问题的稠密召回。
-- **UM1850**（`loader_um.py`）：先按书签切小节，再把 API 小节按 `符号 → Function name → 原型 → Parameters → Return values` 切成“一函数一块”，元数据带 `symbol / module / rev`。
-- **数据手册**：复用 RM0008 的书签 + 表格管线，只换版心参数（`skip_front_pages=1`、页脚 740），不抽插图（与 RM0008 共用图目录会撞 Figure 编号）。
+| 环节 | 通用做法 | 本模块 |
+| --- | --- | --- |
+| 加载 | 每页一个 Document | 1623 条书签当锚点，按 y 坐标切小节（一页可切多节） |
+| 清洗 | 中文折行正则 | 英文折行 + 连字符断词 + 按坐标裁页眉页脚 |
+| 表格 | 纯文本（位表变 `31 30 29 …`） | `find_tables()` 转 Markdown，剔除被表格覆盖的碎文本 |
+| 插图 | 看不到 | `Figure N.` 题注定位 → 裁 PNG → `kind=figure` 块，`--with-figures` 发给视觉模型 |
+| 切块 | 50 字符 | tiktoken 计数、480 token/块、表格原子不切、短节合并 |
+| 噪声 | 全收 | 整章排除 `Revision history` |
+| 检索 | 纯向量 top-3 | 向量 + BM25 → RRF → LLM 重排 → 按小节奏扑 → 邻居补全 |
+| 型号 | — | 识别 F101~104 / F105~107，优先对应密度章节 |
 
-离线先看切块效果：
-
-```powershell
-python -m stm32_rag inspect --source hal --show 3
-python -m stm32_rag inspect --source um --pages 225-232 --show 3   # 只体检 GPIO 章
-python -m stm32_rag inspect --source ds --pages 55-70 --show 3
-```
-
-> 注意：各集合必须用同一嵌入模型（默认 `text-embedding-v4` / 1024 维）。
-
-### 跨集合检索（路由）
-
-`ask` / `eval` 默认 `--sources auto`，按问题特征选集合：
+跨集合路由（`--sources auto`）：
 
 | 问题特征 | 路由顺序 |
 | --- | --- |
-| 出现 `HAL_` / `LL_` 符号 | hal → um → examples |
-| 寄存器 / 位域 / 复位值 / 地址 | rm → hal |
-| 芯片型号（`STM32F103C8T6`）或电气参数 | ds → rm → hal |
+| `HAL_` / `LL_` 符号 | hal → um → examples |
+| 寄存器 / 位域 / 复位值 | rm → hal |
+| 芯片型号 / 电气参数 | ds → rm → hal |
 | 函数 / 宏 / 回调 / 怎么配置 | um → hal → examples |
 | 其他 | rm → hal → ds |
 
-融合方式：各集合先做「向量 + BM25 → RRF」，再按路由顺序加权（1.0 / 0.6 / 0.4 …）做第二次 RRF，最后统一 LLM 重排。
+融合：各源内先 RRF，再按路由顺序加权（1.0 / 0.6 / 0.4 …）做第二次 RRF，最后统一 LLM 重排。
+两个提升召回的小机制：**类型规则分**（问函数抬 `kind=function`）、**中文→API 扩展**（高电平→`SET/high`、串口→`UART/USART`）。
 
-两个提升召回的小机制（`router.py`）：
-
-- **类型规则分**：问「函数」时 `kind=function` 的块 +2 分，问「结构体」时 `kind=typedef` +2 分，避免宏组抢位；
-- **中文→API 关键词扩展**：高电平→`SET/high`、低电平→`RESET/low`、翻转→`Toggle`、串口→`UART/USART` 等，只用于召回，重排仍看原问题。
-
-手工指定集合：`ask "..." --sources rm,hal`。
-
-### 多语料评测
+### 7.3 上传 PDF（MinerU → Markdown → 建库）
 
 ```powershell
-python -m stm32_rag eval --cases stm32_rag/eval_cases_multi.json
+python -m stm32_rag ingest D:\docs\应用笔记.pdf --tier basic   # 全自动
+python -m stm32_rag ingest --md D:\docs\笔记.md                # 已有 Markdown
+python -m stm32_rag ingest 手册.pdf --pages 1-10 --force       # 先试 10 页
+python -m stm32_rag ingest a.pdf b.pdf                         # 批量排队
 ```
 
-实测 8 题（覆盖 RM / DS / HAL 源码 / 例程）：全中 **100%**、平均覆盖 **100%**、MRR **1.000**。
+流程：`PDF → MinerU → mineru_out/<stem>.md → 按标题切节 → 清洗 → 嵌入 → chroma_db/stm32_doc_<slug>_... → custom_sources.json`。
+上传文档自动参与检索（权重 0.8，且每个来源至少保留 1 个重排候选），也可 `ask "..." --sources docs:<slug>` 只查这份。
 
-## 九、上传 PDF：MinerU → Markdown → 建库（全自动）
+MinerU 默认在 `D:\project\step3\llm\Scripts\mineru.exe`（服务 `127.0.0.1:15980`），
+可用 `MINERU_EXE` / `MINERU_TIER` 覆盖；解析产物留在 `mineru_out/`，重跑建库不会重复解析。
+批量时多本先入队再并发解析；嵌入按批并发（`--workers`），切块仍是单线程（CPU 密集）。
+
+### 7.4 实测数据
+
+| 指标 | 数值 |
+| --- | --- |
+| RM0008 | 1133 页 / 12.5 MB / 1623 书签 / 1334 小节 / 474 张表格 |
+| 切块 | 2016 正文 + 364 插图 = 2380 块 |
+| 建库耗时 | 首次解析 979 s + 向量化 146 s（之后走缓存） |
+| 评测（20 题，锚点 + MRR） | 全中 100%，平均覆盖 97.5%，MRR 1.000 |
+| 多语料评测（8 题跨 RM/DS/HAL/例程） | 全中 100%，覆盖 100%，MRR 1.000 |
+
+### 7.5 关键参数
+
+`config.py`：
+
+- `BuildConfig.max_tokens / min_tokens / overlap_tokens`：块大小与短节合并；
+- `BuildConfig.exclude_chapter_patterns`：整章排除（默认 `Revision history`）；
+- `RetrieveConfig.vector_k / bm25_k / rerank_pool / final_k`：两路召回与最终小节数；
+- `RetrieveConfig.max_per_section`：单节最多保留几块（寄存器位定义表常跨 3 块，别调到 2）；
+- `RetrieveConfig.max_context_tokens`：进 Prompt 的正文上限（默认 6000）；
+- `RetrieveConfig.use_rerank / expand_neighbors / device_boost`：重排、邻居补全、按型号偏置。
+
+环境变量：
+
+| 变量 | 作用 |
+| --- | --- |
+| `LAB_CONFIG_DIR` | 模型配置目录（默认 `week23/20261027`，同时读 `week23/.env`） |
+| `CHAT_MODEL` | 生成与重排模型（默认 `kimi-k3.1-pro`） |
+| `STM32_EMBED_MODEL / STM32_EMBED_DIM` | 嵌入模型与维度（默认 `text-embedding-v4` / 1024，**换它必须换集合名重建**） |
+| `STM32_PDF / STM32_DS_PDF / STM32_UM_PDF` | 手册路径 |
+| `STM32_HAL_ROOT` | `vendor/STM32CubeF1` 路径 |
+| `STM32_DB_DIR` | Chroma 目录 |
+| `STM32_WORKSPACE_DIR` | 默认交付目录（`week25/workspaces`） |
+| `STM32_UV4` | `UV4.exe` 路径 |
+| `STM32_BUILD_TIMEOUT / STM32_KILL_STALE_UV4` | 编译超时 / 是否清理残留 µVision 进程 |
+| `STM32_DEVICE / STM32_SYSCLK / STM32_HSE` | 默认器件与时钟 |
+| `MINERU_EXE / MINERU_TIER` | MinerU 可执行文件与解析档位 |
+
+---
+
+## 8. 知识图谱（Neo4j）
+
+这里有两张图，数据源不同、用途也不同：
+
+| | 器件事实图（8.1~8.2） | 文档关系图（8.3） |
+| --- | --- | --- |
+| 数据来源 | `mcu.py` 静态表 | Chroma 的 chunk metadata |
+| 节点 | Device / Pin / Timer / Usart / DmaChannel / Bus / Irq | Doc / Chapter / Section / Chunk / Symbol |
+| 回答 | 「PA8 只能是 TIM1_CH1」这类**确定事实** | 「这个符号在哪讲、谁定义了它、哪块和它相关」 |
+
+### 8.1 器件事实图：建图
 
 ```powershell
-# 一条命令跑完：起 MinerU 服务 -> 解析 -> 切块 -> 清洗 -> 入库 -> 注册
-python -m stm32_rag ingest D:\docs\应用笔记.pdf --tier basic
-
-# 已有 Markdown，跳过 MinerU
-python -m stm32_rag ingest --md D:\docs\笔记.md
-
-# 大文档先试前 10 页；重建该文档集合；强制重新解析
-python -m stm32_rag ingest 手册.pdf --pages 1-10
-python -m stm32_rag ingest 手册.pdf --rebuild
-python -m stm32_rag ingest 手册.pdf --force
-
-# 批量：全部先入队，MinerU 后台逐本解析，完成一本就切块入库
-python -m stm32_rag ingest 手册.pdf 应用笔记.pdf ANxxxx.pdf
+# 先确认 Neo4j 5.x 社区版在跑（部署见 ../neo4j/README.md）
+& d:\project\step1\week23\.venv\Scripts\python.exe -m stm32_rag graph --build
 ```
 
-流程与产物：
-
-```
-PDF → MinerU(basic) → mineru_out/<文件名>.md
-    → 按 Markdown 标题切节（代码块/表格原子保留）→ 清洗 → 嵌入
-    → chroma_db/stm32_doc_<slug>_text_embedding_v4
-    → chroma_db/custom_sources.json 注册 docs:<slug>
+```text
+建图完成
+节点：Device 5、Pin 80、Timer 8、Usart 5、DmaChannel 11、Bus 2、Irq 9
+关系：CLOCKED_BY 13、DMA 25、HAS_PIN 297、HAS_TIMER 32、HAS_USART 23、IRQ 9、TIM_CH 16、USART_ROLE 10
+校验：图与 mcu.py 一致 ✓
 ```
 
-- `router` 会自动把上传文档纳入检索（权重 0.8，且每个自定义来源至少保留 1 个重排候选，不会被内置语料挤掉）；
-- 查看状态：`python -m stm32_rag stats --source docs:<slug>`；也可 `ask "..." --sources docs:<slug>` 只查这份文档；
-- MinerU 安装在 `D:\project\step3\llm`（见 `MINERU.md`），可用 `MINERU_EXE` / `MINERU_TIER` 覆盖；
-- 解析产物留在 `mineru_out/`，重跑建库不会重复解析；
-- 清洗会合并被字体拆开的字母（`S T M 32` → `STM32`），并丢弃 MinerU 的 `page x/y` 页眉页脚；
-- 实测：数据手册前 10 页解析出的标题、列表、表格都是标准 Markdown；2 页 PDF 解析 14 秒。
+图直接由 `mcu.py` 的静态表生成（单一数据源），`graph --verify` 会把图里读回来的结果
+和 `mcu.py` 现算的结果逐条对比，表改了忘了重建会立刻报出来。
+建图幂等，关系每次全量重建，所以 `mcu.py` 改小（比如 C8 去掉 UART4）不会残留旧边。
 
-异步 / 并发：
+### 8.2 器件事实图：常用查询
 
-- `ingest` 走 `mineru parse --no-wait` 入队（约 2 秒返回任务 ID），再轮询 Markdown 是否落盘；批量时多本排队并行解析，避免一本一本等；
-- 切块是 CPU 密集型（tiktoken + 正则 + GIL），不做线程化；只有嵌入调用并发（`--workers`，默认 8）；
-- 检索侧多源召回并行取查询向量（每个源一次 embedding 调用曾是主要延迟），Chroma 查询仍串行，避免多集合并发读的 HNSW 段错误；
-- 需要在事件循环里用：`await router.asearch(query)` / `await aingest_batch(pdfs=[...])`。
+| 命令 | 回答什么 |
+| --- | --- |
+| `graph --pin PA8` | PA8 只能复用成 TIM1_CH1（高级定时器） |
+| `graph --pin PC13` | 没有定时器/串口复用，只能当普通 GPIO |
+| `graph --usart USART1` | TX=PA9、RX=PA10、DMA1_Channel4/5、USART1_IRQn、APB2 |
+| `graph --timer TIM3` | CH1~CH4 各在哪个引脚、DMA 通道、中断 |
+| `graph --pwm-pins` | 全部 16 个可出 PWM 的引脚 |
+| `graph --device STM32F103C8` | 64KB/20KB、4 个定时器、**只有 3 个串口**（UART4/5 的 PC10~PC12 在 LQFP48 上没引出） |
+| `graph --stats` / `--verify` | 图规模 / 与 `mcu.py` 互验 |
+| `graph --cypher "MATCH ..."` | 只读 Cypher（`CREATE/MERGE/DELETE/SET` 会被拒绝） |
+
+### 8.3 文档关系图（GraphRAG）
+
+向量检索只拿到“语义相近的块”；图能把**同一个符号在不同语料里的块**串起来：
+`HAL_GPIO_Init` 在 UM1850 的 API 说明、HAL 源码的实现、例程的用法，一次就都拿到。
+
+**不需要 LLM 抽实体** —— 建库时 metadata 里已经有 `symbols`/`symbol`/`chapter`/`section_id`/
+`chunk_index`/`page`，直接读一遍就是图：
+
+```powershell
+& d:\project\step1\week23\.venv\Scripts\python.exe -m stm32_rag graph-docs --build
+```
+
+```text
+建图完成
+节点：Doc 5、Chapter 180、Section 5999、Chunk 8154、Symbol 3855、Peripheral 52
+关系：IN_DOC 8154、IN_CHAPTER 8154、IN_SECTION 8154、NEXT 2155、MENTIONS 9026、DEFINES 4866、CALLS 947、USES_PERIPHERAL 2071、SAME_AS 24
+语料：rm 2380、ds 176、um 2591、hal 2763、examples 244
+```
+
+图的边全是确定性生成的：
+
+| 关系 | 含义 | 来源 |
+| --- | --- | --- |
+| `IN_DOC` / `IN_CHAPTER` / `IN_SECTION` | 块 → 文档 / 章 / 小节 | `doc`、`chapter`、`section_id` |
+| `NEXT` | 同小节相邻块 | `chunk_index` 排序 |
+| `MENTIONS` | 块提到了哪些符号 | `symbols` / `symbol` |
+| `DEFINES` | 块定义了这个符号 | `kind=function\|typedef\|macro` |
+| `CALLS` | 函数 → 它调用的 HAL/LL 符号 | 函数体正则 `HAL_xxx(`（947 条） |
+| `USES_PERIPHERAL` | 块/符号 → 外设（TIM1、GPIOA、DMA1_Channel4…） | 正文 + 标题正则（2071 条） |
+| `SAME_AS` | `Peripheral` → 器件事实图的 `Timer`/`Usart`/`DmaChannel` | 同名对齐（跨图 JOIN） |
+
+检索时开一个开关就会做**跨语料扩展**（种子块 → 共同符号 → 其它语料的块）：
+
+```powershell
+python -m stm32_rag ask "HAL_GPIO_Init 的参数和返回值是什么？" --graph-expand -k 4 --show-context
+python -m stm32_rag eval --graph-expand          # A/B 对比
+```
+
+实测（关闭重排、20 道寄存器题）：
+
+| 配置 | 全中率 | 命中覆盖率 | MRR |
+| --- | --- | --- | --- |
+| 基线 | 95.0% | 95.0% | 0.893 |
+| `--graph-expand` | 95.0% | 95.0% | 0.893 |
+
+寄存器题本来就不靠跨语料，所以指标不变（说明没有退化）；真正的收益在函数类问题：
+问 `HAL_GPIO_Init` 时，扩展会把 UM1850 §20.2.5 的 API 说明补进上下文（`+图 via HAL_GPIO_Init`）。
+
+调试/巡检命令：
+
+| 命令 | 作用 |
+| --- | --- |
+| `graph-docs --stats` | 节点/关系数量 |
+| `graph-docs --symbol HAL_GPIO_Init` | 符号出现在哪些块（带来源、页码、是否定义处） |
+| `graph-docs --chunk <chunk-id>` | 块详情 + 小节/章 + 相邻块 |
+| `graph-docs --expand <chunk-id>` | 单块能扩出哪些跨语料邻块 |
+| `graph-docs --calls HAL_UART_Init` | 调用链（2 跳）；`--callers` 反向看谁调用它 |
+| `graph-docs --peripheral TIM1` | 哪些块讲这个外设 + 器件图的通道/DMA/中断（跨图） |
+| `graph-docs --cypher "MATCH ..."` | 只读 Cypher |
+
+三个索引细节：
+
+1. **Chunk 主键是「来源 + Chroma id」**：RM0008 和 DS 的小节号会撞（`5.1.1#0` 在两边都有），
+   只按 chunk id 建节点会丢 14 个块；
+2. `router.search` 的合并键也一并改成了 `(source, id)` —— 原来只按 id 合并，
+   撞号的块会被后一个源**静默覆盖**；
+3. **`loader_hal._scan_units` 的函数边界用大括号配对**（原来取「第一个 `strip()=='}'` 的行」，
+   会把 `HAL_UART_Init` 截成 718 字符、丢掉 `HAL_UART_MspInit` 调用）。修复后
+   `hal` 语料从 2187 块变 2763 块、`examples` 从 180 变 244，**已重建这两个集合**。
+
+重建 Chroma 语料后记得重跑 `graph-docs --build`（chunk id 会变）。
+
+### 8.4 跨语料 A/B（`eval-graph`）
+
+`eval_cases.json` 里 20 题全是寄存器题，测不出图扩展的价值，所以另开一组
+`eval_cases_functions.json`（12 题，问 HAL/LL 函数参数，期望来源是 UM1850）：
+
+```powershell
+python -m stm32_rag eval-graph          # 默认 k=6，关重排
+eval-graph --json                       # 结构化输出
+```
+
+实测：
+
+```text
+跨语料命中（期望来源进 top-6）：12 题 | 基线 0.0% → 图扩展 100.0% | 平均新增块 4.42
+```
+
+原因很直接：函数类问题里 BM25/向量都被 HAL 源码块制霸（关键词命中太强），
+UM1850 的 API 说明永远挤不进 top-k；图按符号把 UM 块直接补进来，12 题全部命中。
+
+寄存器题那 20 题指标不变（95.0% / MRR 0.893），说明没有退化。
+
+### 8.4 Agent 怎么用
+
+`stm32_graph_query` 是器件事实图工具，`stm32_doc_graph` 是文档关系图工具（共 9 个工具）。
+系统提示里已经把分工写清楚：**手册原文**找 `stm32_knowledge_search`；
+**引脚/DMA/总线/中断**找 `stm32_graph_query`；**某个函数在哪讲、调用了谁、哪个章节讲这个外设**找 `stm32_doc_graph`。
+
+```text
+stm32_graph_query("pin", "PA8")           → PA8 → TIM1_CH1（高级定时器）
+stm32_graph_query("usart", "USART1")      → TX=PA9 RX=PA10 DMA1_Channel4/5 APB2
+stm32_doc_graph("calls", "HAL_UART_Init") → HAL_UART_MspInit（1 跳，p.553）
+stm32_doc_graph("peripheral", "TIM3")     → 讲 TIM3 的块 + 器件图通道/DMA/中断
+```
+
+Neo4j 没启动时工具只回一句“图谱不可用”，不阻断生成与编译——图谱是**增强**，不是依赖。
+
+### 8.5 为什么先不用 LLM 抽实体
+
+LLM 抽实体/关系贵、不可复现，而你这批语料里 **6033/7514 个块本来就带符号**，
+`chunker._symbols()` 和 `loader_hal` 已经把正则抽好的结果写进了 metadata。
+所以 P0 只做确定性建图；等需要「参数说明里的自然语言关系」（如“PB6 默认是 I2C1_SCL”）时，
+再对新增文档做 LLM 关系抽取，已有层不用改。
+
+---
+
+## 9. Keil MCP Server
+
+### 9.1 VS Code（Copilot）
+
+`week25/.vscode/mcp.json`：
+
+```json
+{
+  "servers": {
+    "keil-mdk": {
+      "type": "stdio",
+      "command": "d:\\project\\step1\\week23\\.venv\\Scripts\\python.exe",
+      "args": [
+        "-m", "stm32_rag.mcp_keil_server",
+        "--workspace", "E:\\Codex\\2026-11-16\\new-chat\\outputs\\STM32F103C8T6_Base"
+      ],
+      "env": { "PYTHONPATH": "d:\\project\\step1\\week25" }
+    }
+  }
+}
+```
+
+### 9.2 Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "keil-mdk": {
+      "command": "d:\\project\\step1\\week23\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "stm32_rag.mcp_keil_server", "--workspace", "E:\\...\\工程目录"],
+      "cwd": "d:\\project\\step1\\week25"
+    }
+  }
+}
+```
+
+### 9.3 工具清单
+
+`keil_scaffold`、`keil_project_info`、`keil_list_sources`、`keil_read_file`、`keil_write_file`、
+`keil_add_source`、`keil_set_defines`、`keil_add_include_paths`、`keil_build`、
+`keil_last_errors`、`keil_build_log`。
+
+`--workspace` 是启动参数；换工程改 JSON 重启即可。
+
+---
+
+## 10. 交付物
+
+```text
+workspaces/pwm_pa8/
+  Core/{Inc,Src,Startup}/        源码与启动文件
+  Drivers/{CMSIS,STM32F1xx_HAL_Driver}/
+  MDK-ARM/<name>.uvprojx         可直接用 µVision 打开
+  MDK-ARM/Objects/<name>.axf     编译产物
+  MDK-ARM/build.log              编译日志
+  REPORT.md                      需求 / 规格 / 计算核对 / 接线 / 编译结果
+  CHANGES.md                     每次需求追加一条变更记录
+  AGENT.md                       （仅 agent 模式）工具轨迹与交付说明
+```
+
+CubeMX 工程里额外有 `.stm32rag/spec.json`（多轮累积的规格）。
+
+---
+
+## 11. 已知边界与后续路线
+
+### 11.1 边界
+
+1. **外设范围**：GPIO（输出/输入/外部中断）、TIM PWM（单通道/定时器）、TIM 更新中断、USART 发送（轮询/DMA）。
+   ADC、I2C、SPI、CAN、USART 接收、同一定时器多通道明确未支持，会在结果里说明；
+2. **整文件生成**：`generate_application` 适合从零建工程；CubeMX 工程用增量模式，其他已有工程用
+   `read_source` + `write_source` + 编译验证；
+3. **不回写 `.ioc`**（波特率除外）；
+4. **不做烧录**：本机 DFP 的 Flash 算法目录为空，`UV4 -f` 不可用；工程保留 ST-Link 配置，用 µVision 下载即可；
+5. **器件表只覆盖 F103 常见型号**（C8 / RB / RC / VE / ZE）；
+6. **`develop` 的需求解析是规则驱动**：只认“引脚 + 频率/占空比/波特率 + 关键词”，更自由的说法用 `agent`；
+7. **嵌入维度固定**：换 `STM32_EMBED_MODEL` / `STM32_EMBED_DIM` 必须换集合名重建。
+
+### 11.2 后续路线（按板子需求排序）
+
+板子配置：4 个按键（低电平有效）、电位器（ADC）、无源蜂鸣器（PWM）、SSD1306 0.96" OLED（I2C）。
+
+| 阶段 | 内容 |
+| --- | --- |
+| P0 | 同一定时器多通道 PWM；CubeMX 已配外设的追加通道；USART 接收 + 环形缓冲 + 命令行；按键消抖组件；蜂鸣器音调表 |
+| P1 | ADC 旋钮（DMA + 滑动平均）；SSD1306 I2C 驱动（ASCII）；`app.c` 1 ms 节拍调度骨架 |
+| P2 | 菜单/页面框架；图形 API；串口自检固件；烧录工具接入（DFP Flash / STM32CubeProgrammer / pyOCD） |
+
+---
+
+## 附录：命令速查
+
+| 命令 | 作用 |
+| --- | --- |
+| `inspect [--source rm\|ds\|um\|hal\|examples]` | 体检语料并预览切块 |
+| `build [--source ...] [--rebuild]` | 建 RAG 索引（Chroma） |
+| `stats [--source ...]` | 看集合状态 |
+| `ask "问题" [--sources auto] [--with-figures] [--graph-expand]` | 知识库问答（带出处） |
+| `eval [--cases ...] [--check]` | 锚点式评测 |
+| `ingest <pdf>... [--md] [--pages] [--rebuild]` | PDF → MinerU → 建库 |
+| `figures [--show N]` | 只抽插图（调试） |
+| `scaffold --dest DIR [--device]` | 生成可编译工程骨架 |
+| `codegen "需求" [--json]` | 只解析并打印代码，不落盘 |
+| `develop "需求" --workspace DIR` | 生成 + 编译 + 自修复 + 报告 |
+| `agent "需求" --workspace DIR` | LLM 编排，失败回退 `develop` |
+| `project --workspace DIR` | 查看 `.uvprojx` + `.ioc` 结构 |
+| `compile --workspace DIR [--clean]` | 用 UV4 编译（别名 `keil`） |
+| `graph --build` / `--pin PA8` / `--usart USART1` / `--timer TIM3` / `--pwm-pins` / `--stats` / `--verify` | 器件知识图谱（Neo4j） |
+| `graph-docs --build` / `--symbol HAL_GPIO_Init` / `--chunk ID` / `--expand ID` | 文档关系图（GraphRAG） |
+| `graph-docs --calls X` / `--callers X` / `--peripheral TIM1` | 调用链 / 反向调用 / 外设相关章节 |
+| `eval-graph [-k 6]` | 跨语料 A/B：期望来源能否进 top-k |
+| `mcp --workspace DIR` | 启动 Keil MCP Server |
+
+---
+
+> 面试讲稿（30 秒 / 2 分钟 / 5 分钟版本、技术钩子、Q&A、数字卡）见 [`INTERVIEW.md`](INTERVIEW.md)。

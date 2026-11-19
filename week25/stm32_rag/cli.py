@@ -6,6 +6,20 @@
     python -m stm32_rag stats                   # 看库里有多少块
     python -m stm32_rag ask "GPIOx_CRL 的复位值是多少？"
     python -m stm32_rag eval                    # 跑锚点评测
+
+开发助手：
+
+    python -m stm32_rag scaffold --dest workspaces/demo          # 生成可编译工程
+    python -m stm32_rag codegen "配置 PA8 输出 1MHz PWM"         # 只看规格与代码
+    python -m stm32_rag develop "配置 PA8 输出 1MHz PWM"         # 确定性全链路（含编译）
+    python -m stm32_rag agent "配置 PA8 输出 1MHz PWM"           # LLM 编排（失败自动回退）
+    python -m stm32_rag compile --workspace workspaces/demo      # 只编译（别名 keil）
+    python -m stm32_rag project --workspace workspaces/demo      # 看工程结构
+    python -m stm32_rag graph --build                            # 建器件知识图谱（Neo4j）
+    python -m stm32_rag graph --pin PA8                          # 查引脚复用 / DMA / 中断
+    python -m stm32_rag graph-docs --build                       # 建文档关系图（GraphRAG）
+    python -m stm32_rag ask "问题" --graph-expand                # 检索时做跨语料扩展
+    python -m stm32_rag mcp --workspace workspaces/demo          # 启动 Keil MCP Server
 """
 
 from __future__ import annotations
@@ -15,6 +29,7 @@ import dataclasses
 import json
 import sys
 from collections import Counter
+from pathlib import Path
 
 from .config import (
     DS_PDF_PATH,
@@ -195,6 +210,8 @@ def _retriever(args):
         cfg.use_rerank = False
     if getattr(args, "no_expand", False):
         cfg.expand_neighbors = False
+    if getattr(args, "graph_expand", False):
+        cfg.graph_expand = True
     if getattr(args, "k", None):
         cfg.final_k = args.k
     if getattr(args, "vector_k", None):
@@ -254,6 +271,287 @@ def cmd_eval(args) -> int:
     return 0
 
 
+def cmd_eval_graph(args) -> int:
+    """跨语料 A/B：看「期望来源」有没有被图谱扩展拉进 top-k。"""
+    from .evaluate import load_function_cases, run_cross_source_eval
+    from .router import MultiSourceRetriever
+
+    cases = load_function_cases(args.cases) if args.cases else load_function_cases()
+
+    def make_retriever(cfg):
+        return MultiSourceRetriever(cfg=cfg)
+
+    base = run_cross_source_eval(make_retriever, cases, graph_expand=False, k=args.k)
+    graph = run_cross_source_eval(make_retriever, cases, graph_expand=True, k=args.k)
+    print(
+        f"跨语料命中（期望来源进 top-{args.k}）：{len(cases)} 题 | "
+        f"基线 {base['rate']:.1%} → 图扩展 {graph['rate']:.1%} | 平均新增块 {graph['avg_added']}"
+    )
+    for before, after in zip(base["rows"], graph["rows"]):
+        mark = "OK" if after["hit"] else "~ "
+        print(
+            f"{mark} +{after['added']} | {before['q'][:36]:38s} "
+            f"基线 {','.join(before['sources'])} → 图 {','.join(after['sources'])}"
+        )
+    if args.json:
+        print(json.dumps({"base": base, "graph": graph}, ensure_ascii=False, indent=2))
+    return 0
+
+
+# ---------------------------------------------------------------- 开发助手
+
+def cmd_scaffold(args) -> int:
+    from .scaffold import scaffold_project
+
+    modules = tuple(item.strip() for item in args.modules.split(",") if item.strip())
+    result = scaffold_project(args.dest, device=args.device, name=args.name, modules=modules)
+    print(f"工程：{result['project']}")
+    print(f"器件：{result['device']}")
+    print(f"文件：{len(result['files'])} 个")
+    return 0
+
+
+def cmd_codegen(args) -> int:
+    from .pipeline import parse_requirement
+    from .codegen import plan_application, spec_summary
+
+    spec, notes, points = parse_requirement(args.requirement, device=args.device)
+    plan = plan_application(spec)
+    if args.json:
+        print(json.dumps(
+            {
+                "spec": spec_summary(spec),
+                "ok": plan.ok,
+                "errors": plan.errors,
+                "warnings": plan.warnings,
+                "checks": plan.checks,
+                "wiring": plan.wiring,
+                "modules": plan.modules,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ))
+        return 0 if plan.ok else 1
+    print(f"需求：{args.requirement}")
+    print(f"器件：{spec.device.name}    SYSCLK {spec.sysclk / 1e6:g} MHz")
+    for point in points:
+        print(f"  · {point}")
+    if notes:
+        print("\n未覆盖/提醒：")
+        for item in notes:
+            print(f"  - {item}")
+    if not plan.ok:
+        print("\n校验失败：")
+        for item in plan.errors:
+            print(f"  - {item}")
+        return 1
+    print("\n计算核对：")
+    for item in plan.checks:
+        print(f"  · {item}")
+    if plan.warnings:
+        print("\n提醒：")
+        for item in plan.warnings:
+            print(f"  - {item}")
+    print("\n接线：")
+    for item in plan.wiring:
+        print(f"  · {item}")
+    print("\n" + "─" * 78)
+    print(plan.main_c)
+    return 0
+
+
+def cmd_develop(args) -> int:
+    from .pipeline import develop
+
+    delivery = develop(
+        args.requirement,
+        workspace=args.workspace,
+        project=args.project,
+        device=args.device,
+        build=not args.no_build,
+        max_fix=args.max_fix,
+        clean=args.clean,
+        sysclk=args.sysclk,
+    )
+    print(delivery.summary())
+    return 0 if delivery.ok else 2
+
+
+def cmd_agent(args) -> int:
+    from .agent import DevAssistant
+
+    assistant = DevAssistant(
+        workspace=args.workspace,
+        project=args.project,
+        max_steps=args.max_steps,
+        auto_build=not args.no_build,
+    )
+    result = assistant.run(args.requirement)
+    print(result.summary())
+    return 0 if result.ok else 2
+
+
+def cmd_build_project(args) -> int:
+    from .keil import KeilBuilder
+    from .project import find_project
+
+    if args.project:
+        project = Path(args.project)
+    elif args.workspace:
+        project = find_project(args.workspace)
+    else:
+        raise SystemExit("请用 --project 指定 .uvprojx，或用 --workspace 指定工程目录")
+    if project is None:
+        raise SystemExit(f"{args.workspace} 下没有找到 .uvprojx")
+    result = KeilBuilder().build(project, clean=args.clean, log_path=args.log)
+    print(f"工程：{project}")
+    print(result.summary())
+    if not result.ok and args.show_log and result.log_path:
+        print("\n--- 日志末尾 ---")
+        print("\n".join(result.log_text.splitlines()[-60:]))
+    return 0 if result.ok else 2
+
+
+def cmd_project(args) -> int:
+    from .project import KeilProject, find_project
+
+    if args.project:
+        project = Path(args.project)
+    elif args.workspace:
+        project = find_project(args.workspace)
+    else:
+        raise SystemExit("请用 --project 指定 .uvprojx，或用 --workspace 指定工程目录")
+    if project is None:
+        raise SystemExit(f"{args.workspace} 下没有找到 .uvprojx")
+    obj = KeilProject(project)
+    print(obj.describe())
+    root = obj.dir.parent
+    from .cubemx import find_ioc, parse_ioc
+
+    ioc = find_ioc(root)
+    if ioc is not None:
+        print()
+        print(parse_ioc(ioc).describe())
+    if args.json:
+        print(json.dumps(obj.summary(), ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_mcp(args) -> int:
+    from . import mcp_keil_server
+
+    argv = ["--transport", args.transport, "--port", str(args.port)]
+    if args.workspace:
+        argv.extend(["--workspace", args.workspace])
+    return mcp_keil_server.main(argv)
+
+
+def cmd_graph(args) -> int:
+    """器件知识图谱（Neo4j）：建图 / 结构化查询 / 与 mcu.py 互验。"""
+    from .graph import GraphStore
+
+    try:
+        store = GraphStore()
+    except RuntimeError as exc:
+        print(f"图谱不可用：{exc}")
+        return 2
+
+    try:
+        if not store.ping():
+            print(f"连不上 Neo4j（{store.uri}）：先启动容器，见 neo4j/README.md")
+            return 2
+
+        if args.build:
+            result = store.build(reset=args.reset)
+            print("建图完成")
+            print(result.summary())
+            issues = store.verify()
+            print("校验：图与 mcu.py 一致 ✓" if not issues else "校验不一致：\n" + "\n".join(f"- {item}" for item in issues))
+            return 0 if not issues else 1
+
+        if args.reset:
+            store.reset()
+            print("已清空图谱节点")
+            return 0
+
+        if args.stats:
+            print(store.describe("stats"))
+            return 0
+
+        if args.verify:
+            print(store.describe("verify"))
+            return 0
+
+        if args.cypher:
+            print(store.describe("cypher", args.cypher))
+            return 0
+
+        if args.pin:
+            print(store.describe("pin", args.pin))
+        elif args.timer:
+            print(store.describe("timer", args.timer))
+        elif args.usart:
+            print(store.describe("usart", args.usart))
+        elif args.device:
+            print(store.describe("device", args.device))
+        elif args.pwm_pins:
+            print(store.describe("pwm_pins"))
+        else:
+            print(store.describe("stats"))
+        return 0
+    finally:
+        store.close()
+
+
+def cmd_graph_docs(args) -> int:
+    """文档知识图谱（GraphRAG）：建图 / 符号查询 / 邻域扩展。"""
+    from .graph_docs import DocGraphStore
+
+    try:
+        store = DocGraphStore()
+    except RuntimeError as exc:
+        print(f"图谱不可用：{exc}")
+        return 2
+
+    try:
+        if not store.ping():
+            print(f"连不上 Neo4j（{store.uri}）：先启动容器，见 neo4j/README.md")
+            return 2
+
+        if args.build:
+            result = store.build(reset=args.reset)
+            print("建图完成")
+            print(result.summary())
+            return 0
+
+        if args.reset:
+            store.reset()
+            print("已清空文档图节点")
+            return 0
+
+        if args.stats:
+            print(store.describe("stats"))
+        elif args.symbol:
+            print(store.describe("symbol", args.symbol))
+        elif args.chunk:
+            print(store.describe("chunk", args.chunk))
+        elif args.expand:
+            print(store.describe("expand", args.expand))
+        elif args.calls:
+            print(store.describe("calls", args.calls))
+        elif args.callers:
+            print(store.describe("callers", args.callers))
+        elif args.peripheral:
+            print(store.describe("peripheral", args.peripheral))
+        elif args.cypher:
+            print(store.describe("cypher", args.cypher))
+        else:
+            print(store.describe("stats"))
+        return 0
+    finally:
+        store.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     # Windows 控制台默认 GBK，输出里的符号会直接报 UnicodeEncodeError
     for stream in (sys.stdout, sys.stderr):
@@ -311,6 +609,7 @@ def main(argv: list[str] | None = None) -> int:
     p_ask.add_argument("--no-rerank", action="store_true")
     p_ask.add_argument("--no-expand", action="store_true")
     p_ask.add_argument("--with-figures", action="store_true", help="命中插图时把原图随消息发给视觉模型")
+    p_ask.add_argument("--graph-expand", action="store_true", help="开启文档图谱跨语料扩展（需先 graph-docs --build）")
     p_ask.add_argument("--show-context", action="store_true")
     p_ask.set_defaults(func=cmd_ask)
 
@@ -322,8 +621,94 @@ def main(argv: list[str] | None = None) -> int:
     p_eval.add_argument("--no-rerank", action="store_true")
     p_eval.add_argument("--no-expand", action="store_true")
     p_eval.add_argument("--check", action="store_true", help="先校验锚点是否在语料中")
+    p_eval.add_argument("--graph-expand", action="store_true", help="开启文档图谱跨语料扩展（A/B 用）")
     p_eval.add_argument("--json", action="store_true")
     p_eval.set_defaults(func=cmd_eval)
+
+    p_eg = sub.add_parser("eval-graph", help="跨语料 A/B：图谱扩展能不能把期望来源拉进 top-k")
+    p_eg.add_argument("--cases", default=None, help="函数类评测集（默认 eval_cases_functions.json）")
+    p_eg.add_argument("-k", type=int, default=6)
+    p_eg.add_argument("--json", action="store_true")
+    p_eg.set_defaults(func=cmd_eval_graph)
+
+    # ---------------- 开发助手 ----------------
+    p_scaffold = sub.add_parser("scaffold", help="生成可编译的 Keil 工程骨架")
+    p_scaffold.add_argument("--dest", required=True, help="生成目录")
+    p_scaffold.add_argument("--device", default=None, help="器件型号，默认 STM32F103RB")
+    p_scaffold.add_argument("--name", default="stm32_app", help="工程名")
+    p_scaffold.add_argument("--modules", default="tim,uart", help="需要启用的 HAL 模块，逗号分隔")
+    p_scaffold.set_defaults(func=cmd_scaffold)
+
+    p_codegen = sub.add_parser("codegen", help="只解析需求并打印生成的代码（不落盘）")
+    p_codegen.add_argument("requirement")
+    p_codegen.add_argument("--device", default=None)
+    p_codegen.add_argument("--json", action="store_true")
+    p_codegen.set_defaults(func=cmd_codegen)
+
+    p_develop = sub.add_parser("develop", help="确定性开发流水线（生成 + 编译 + 自修复 + 报告）")
+    p_develop.add_argument("requirement")
+    p_develop.add_argument("--workspace", default=None, help="交付目录（默认 workspaces/<需求>）")
+    p_develop.add_argument("--project", default=None, help="复用已有 .uvprojx")
+    p_develop.add_argument("--device", default=None)
+    p_develop.add_argument("--sysclk", type=int, default=72_000_000)
+    p_develop.add_argument("--max-fix", type=int, default=3, help="自动修复-重编次数上限")
+    p_develop.add_argument("--clean", action="store_true", help="先全量重编")
+    p_develop.add_argument("--no-build", action="store_true")
+    p_develop.set_defaults(func=cmd_develop)
+
+    p_agent = sub.add_parser("agent", help="LLM 编排的开发助手（失败自动回退到 develop）")
+    p_agent.add_argument("requirement")
+    p_agent.add_argument("--workspace", default=None)
+    p_agent.add_argument("--project", default=None)
+    p_agent.add_argument("--max-steps", type=int, default=40, help="LangGraph 递归步数上限")
+    p_agent.add_argument("--no-build", action="store_true")
+    p_agent.set_defaults(func=cmd_agent)
+
+    p_build = sub.add_parser("compile", aliases=["keil"], help="用 UV4 编译已有工程")
+    p_build.add_argument("--workspace", default=None, help="在哪个目录下找 .uvprojx")
+    p_build.add_argument("--project", default=None, help="直接指定 .uvprojx")
+    p_build.add_argument("--clean", action="store_true", help="先删中间产物")
+    p_build.add_argument("--log", default=None, help="日志路径")
+    p_build.add_argument("--show-log", action="store_true", help="失败时打印日志末尾")
+    p_build.set_defaults(func=cmd_build_project)
+
+    p_project = sub.add_parser("project", help="查看 Keil 工程结构")
+    p_project.add_argument("--workspace", default=None)
+    p_project.add_argument("--project", default=None)
+    p_project.add_argument("--json", action="store_true")
+    p_project.set_defaults(func=cmd_project)
+
+    p_mcp = sub.add_parser("mcp", help="启动 Keil MCP Server")
+    p_mcp.add_argument("--workspace", default=None)
+    p_mcp.add_argument("--transport", default="stdio", choices=["stdio", "sse"])
+    p_mcp.add_argument("--port", type=int, default=8765)
+    p_mcp.set_defaults(func=cmd_mcp)
+
+    p_graph = sub.add_parser("graph", help="器件知识图谱（Neo4j）：建图 / 查询 / 校验")
+    p_graph.add_argument("--build", action="store_true", help="建图（幂等，可重复执行）")
+    p_graph.add_argument("--reset", action="store_true", help="先清空图谱节点（可配 --build）")
+    p_graph.add_argument("--stats", action="store_true", help="看节点/关系数量")
+    p_graph.add_argument("--verify", action="store_true", help="与 mcu.py 静态表互验")
+    p_graph.add_argument("--pin", default=None, help="查引脚能力，如 PA8")
+    p_graph.add_argument("--timer", default=None, help="查定时器，如 TIM3")
+    p_graph.add_argument("--usart", default=None, help="查串口，如 USART1")
+    p_graph.add_argument("--device", default=None, help="查器件，如 STM32F103C8")
+    p_graph.add_argument("--pwm-pins", action="store_true", help="列出所有能出 PWM 的引脚")
+    p_graph.add_argument("--cypher", default=None, help="只读 Cypher 查询")
+    p_graph.set_defaults(func=cmd_graph)
+
+    p_gdocs = sub.add_parser("graph-docs", help="文档知识图谱（GraphRAG）：建图 / 符号 / 邻域扩展")
+    p_gdocs.add_argument("--build", action="store_true", help="从 Chroma metadata 建图（幂等）")
+    p_gdocs.add_argument("--reset", action="store_true", help="先清空文档图节点（可配 --build）")
+    p_gdocs.add_argument("--stats", action="store_true", help="看节点/关系数量")
+    p_gdocs.add_argument("--symbol", default=None, help="查符号出现在哪些块，如 HAL_GPIO_Init")
+    p_gdocs.add_argument("--chunk", default=None, help="查块详情 + 相邻块（传 Chroma chunk id）")
+    p_gdocs.add_argument("--expand", default=None, help="给一个 chunk id，看能扩出哪些跨语料邻块")
+    p_gdocs.add_argument("--calls", default=None, help="调用链（2 跳），如 HAL_GPIO_Init")
+    p_gdocs.add_argument("--callers", default=None, help="反向：谁调用了它")
+    p_gdocs.add_argument("--peripheral", default=None, help="查外设：哪些块提到它 + 器件图信息，如 TIM1")
+    p_gdocs.add_argument("--cypher", default=None, help="只读 Cypher 查询")
+    p_gdocs.set_defaults(func=cmd_graph_docs)
 
     args = parser.parse_args(argv)
     return args.func(args)

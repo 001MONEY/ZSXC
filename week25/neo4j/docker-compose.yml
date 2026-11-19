@@ -1,0 +1,35 @@
+services:
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"   # HTTP / Neo4j Browser (http://localhost:7474)
+      - "7687:7687"   # Bolt (bolt://localhost:7687)
+    environment:
+      # username/password ; change here and restart if needed
+      NEO4J_AUTH: neo4j/neo4j123456
+      # memory (small laptop-friendly defaults)
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512m
+      # APOC plugin (downloaded on first start)
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      NEO4J_dbms_security_procedures_allowlist: apoc.*
+      # allow import from ./import
+      NEO4J_dbms_directories_import: /import
+    volumes:
+      - ./volumes/neo4j/data:/data
+      - ./volumes/neo4j/logs:/logs
+      - ./import:/import
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p neo4j123456 'RETURN 1' || exit 1"]
+      interval: 30s
+      start_period: 60s
+      timeout: 20s
+      retries: 5
+
+networks:
+  default:
+    name: neo4j

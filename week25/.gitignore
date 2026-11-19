@@ -18,6 +18,9 @@ vendor/
 # ===== Milvus 本地数据卷（etcd / minio / milvus 运行数据，体积大且随时变化）=====
 milvus/volumes/
 
+# ===== Neo4j 本地数据卷（图数据库 + 事务日志，体积大且随时变化）=====
+neo4j/volumes/
+
 # ===== MinerU 运行期临时文件 =====
 .mineru-service.lock
 
@@ -31,3 +34,6 @@ milvus/volumes/
 *.log
 Thumbs.db
 .DS_Store
+
+# ===== 开发助手交付目录（工程 + 编译产物，可由 CLI 重新生成） =====
+workspaces/

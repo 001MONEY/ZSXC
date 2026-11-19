@@ -11,10 +11,11 @@ import re
 from dataclasses import replace
 from pathlib import Path
 
-from .config import PACKAGE_DIR
+from .config import PACKAGE_DIR, RetrieveConfig
 from .retrieve import HybridRetriever
 
 CASES_PATH = PACKAGE_DIR / "eval_cases.json"
+FUNCTION_CASES_PATH = PACKAGE_DIR / "eval_cases_functions.json"
 
 
 def _normalize(text: str) -> str:
@@ -95,3 +96,44 @@ def run_eval(
             f"平均覆盖 {summary['avg_coverage']:.1%}｜MRR {summary['mrr']:.3f}"
         )
     return summary
+
+
+# ---------------------------------------------------------------- 跨语料 A/B
+
+def load_function_cases(path: str | Path | None = None) -> list[dict]:
+    """函数类评测题：`expect` 是期望出现在 top-k 里的来源（如 um）。"""
+    data = json.loads(Path(path or FUNCTION_CASES_PATH).read_text(encoding="utf-8"))
+    cases = data["cases"] if isinstance(data, dict) else data
+    for case in cases:
+        if not case.get("q") or not case.get("expect"):
+            raise ValueError(f"题目缺少 q/expect：{case}")
+    return cases
+
+
+def run_cross_source_eval(make_retriever, cases: list[dict], graph_expand: bool, k: int = 6) -> dict:
+    """看「期望来源」有没有进 top-k；用来量化图谱扩展的收益。
+
+    关闭重排：这里测的是召回，不是模型打分。
+    """
+    cfg = RetrieveConfig(graph_expand=graph_expand, use_rerank=False, final_k=k)
+    retriever = make_retriever(cfg)
+    rows: list[dict] = []
+    for case in cases:
+        hits = retriever.search(case["q"], cfg=cfg)
+        sources = [str(h.metadata.get("source_key") or "") for h in hits]
+        expected = {str(item) for item in case["expect"]}
+        rows.append(
+            {
+                "q": case["q"],
+                "hit": bool(expected & set(sources)),
+                "sources": sources,
+                "added": sum(1 for h in hits if h.metadata.get("graph_expanded")),
+            }
+        )
+    n = len(rows)
+    return {
+        "cases": n,
+        "rate": round(sum(1 for r in rows if r["hit"]) / n, 3) if n else 0.0,
+        "avg_added": round(sum(r["added"] for r in rows) / n, 2) if n else 0.0,
+        "rows": rows,
+    }

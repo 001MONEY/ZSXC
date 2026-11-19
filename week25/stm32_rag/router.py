@@ -21,7 +21,7 @@ from types import SimpleNamespace
 from .config import SOURCE_COLLECTIONS, RetrieveConfig, get_llm
 from .index import Stm32Index
 from .ingest import load_registry
-from .retrieve import Hit, HybridRetriever, rerank_hits
+from .retrieve import GraphExpander, Hit, HybridRetriever, rerank_hits
 
 _SYMBOL_RE = re.compile(r"\b(?:HAL|LL)_[A-Za-z0-9_]+\b")
 _REGISTER_RE = re.compile(
@@ -122,9 +122,13 @@ def _collapse_sections(hits: list[Hit]) -> list[Hit]:
     return kept
 
 
+def _key_of(hit: Hit) -> tuple[str, str]:
+    """跨集合唯一标识：同一 chunk id 在不同集合里是不同块（RM0008 与 DS 的小节号会撞）。"""
+    return (str(hit.metadata.get("source_key") or ""), hit.id)
+
+
 class MultiSourceRetriever:
     """按规则路由到多个集合，召回后跨集合 RRF 融合再统一重排。"""
-
     def __init__(
         self,
         sources: list[str] | None = None,
@@ -147,6 +151,23 @@ class MultiSourceRetriever:
         self._db_dir = db_dir
         self._retrievers: dict[str, HybridRetriever] = {}
         self._unavailable: set[str] = set()
+        self._graph = GraphExpander(self._lookup_any)
+
+    # ------------------------------------------------------------ 图谱扩展
+    def _lookup_any(self, chunk_id: str, source: str | None = None) -> tuple[str, dict] | None:
+        """跨集合按 chunk id 找文本（图扩展只存 id，正文仍在语料里）。"""
+        order = [source] if source else []
+        order += [name for name in self._retrievers if name != source]
+        for name in order:
+            retriever = self._retrievers.get(name)
+            if retriever is None:
+                continue
+            corpus = retriever.ensure_ready()
+            index = corpus.by_id.get(chunk_id)
+            if index is None:
+                continue
+            return corpus.texts[index], {**corpus.metas[index], "source_key": name}
+        return None
 
     @property
     def llm(self):
@@ -212,8 +233,8 @@ class MultiSourceRetriever:
                 for name, vector in zip(names, vectors):
                     embeddings[name] = vector
 
-        bonus: dict[str, float] = defaultdict(float)
-        merged: dict[str, Hit] = {}
+        bonus: dict[tuple[str, str], float] = defaultdict(float)
+        merged: dict[tuple[str, str], Hit] = {}
         best_by_source: dict[str, Hit] = {}
         # 路由顺序即重要程度：第一位 1.0，之后依次衰减，
         # 否则例程库的函数块会把 HAL 源码的函数挤出重排池。
@@ -226,12 +247,14 @@ class MultiSourceRetriever:
             ranked = retriever.recall(search_query, cfg, query_embedding=embeddings.get(name))[: cfg.rerank_pool]
             for rank, hit in enumerate(ranked, start=1):
                 hit.metadata = {**hit.metadata, "source_key": name}
-                merged.setdefault(hit.id, hit)
+                # RM0008 与 DS 会有相同的小节号（如 5.1.1#0），只按 chunk id 合并会丢块
+                key = (name, hit.id)
+                merged.setdefault(key, hit)
                 best_by_source.setdefault(name, hit)
                 # 规则加权：问函数时函数块轻微上提（量级约等于一个名次贡献）
-                bonus[hit.id] += weight * (1.0 / (cfg.rrf_k + rank) + 0.008 * _kind_bonus(query, hit))
+                bonus[key] += weight * (1.0 / (cfg.rrf_k + rank) + 0.008 * _kind_bonus(query, hit))
 
-        candidates = sorted(merged.values(), key=lambda h: bonus[h.id], reverse=True)[: cfg.rerank_pool]
+        candidates = sorted(merged.values(), key=lambda h: bonus[_key_of(h)], reverse=True)[: cfg.rerank_pool]
         # 兜底：每个上传文档至少留一个候选进重排（否则权重再高也可能被 14 名截断）
         present_sources = {h.metadata.get("source_key") for h in candidates}
         for name in self._custom:
@@ -240,7 +263,7 @@ class MultiSourceRetriever:
             candidates.append(best_by_source[name])
             present_sources.add(name)
         for hit in candidates:
-            hit.score = bonus[hit.id]
+            hit.score = bonus[_key_of(hit)]
         if cfg.use_rerank:
             # 扩展词只用于召回：给重排模型看原始问题，否则附加的英文关键词会干扰判断
             candidates = rerank_hits(self.llm, query, candidates)
@@ -254,6 +277,8 @@ class MultiSourceRetriever:
         if cfg.expand_neighbors:
             top = self._expand(top, cfg)
         top = self._append_pinned(query, top)
+        if cfg.graph_expand:
+            top = self._graph.expand(top, cfg)
         return top
 
     def _append_pinned(self, query: str, hits: list[Hit]) -> list[Hit]:

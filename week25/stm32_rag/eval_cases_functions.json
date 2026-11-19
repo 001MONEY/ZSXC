@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "note": "函数类评测：问题指向 HAL/LL 函数，答案侧重点在 UM1850 的 API 说明（expect=um）。用来测文档图谱的跨语料扩展。",
+  "cases": [
+    {
+      "q": "HAL_UART_Init 的参数和返回值分别是什么？",
+      "expect": ["um"],
+      "anchors": ["Function description", "Return values"]
+    },
+    {
+      "q": "HAL_TIM_PWM_Start 的参数说明和返回状态是什么？",
+      "expect": ["um"],
+      "anchors": ["Function description", "Return values"]
+    },
+    {
+      "q": "HAL_ADC_Start_DMA 的参数含义是什么？",
+      "expect": ["um"],
+      "anchors": ["Function description", "Return values"]
+    },
+    {
+      "q": "HAL_I2C_Master_Transmit 的参数和返回值是什么？",
+      "expect": ["um"],
+      "anchors": ["Function description", "Return values"]
+    },
+    {
+      "q": "HAL_SPI_Transmit 的参数和返回值是什么？",
+      "expect": ["um"],
+      "anchors": ["Function description", "Return values"]
+    },
+    {
+      "q": "HAL_RCC_OscConfig 的参数和返回值是什么？",
+      "expect": ["um"],
+      "anchors": ["Function description", "Return values"]
+    },
+    {
+      "q": "HAL_DMA_Start_IT 的参数和返回值是什么？",
+      "expect": ["um"],
+      "anchors": ["Function description", "Return values"]
+    },
+    {
+      "q": "HAL_GPIO_TogglePin 的参数和返回值是什么？",
+      "expect": ["um"],
+      "anchors": ["Function description", "Return values"]
+    },
+    {
+      "q": "LL_GPIO_SetPinMode 的参数含义是什么？",
+      "expect": ["um"],
+      "anchors": ["Function description", "Return values"]
+    },
+    {
+      "q": "HAL_TIM_Base_Start_IT 的参数和返回值是什么？",
+      "expect": ["um"],
+      "anchors": ["Function description", "Return values"]
+    },
+    {
+      "q": "HAL_NVIC_SetPriority 的几个参数分别是什么？",
+      "expect": ["um"],
+      "anchors": ["Function description", "Return values"]
+    },
+    {
+      "q": "HAL_FLASH_Program 的参数和返回值是什么？",
+      "expect": ["um"],
+      "anchors": ["Function description", "Return values"]
+    }
+  ]
+}
