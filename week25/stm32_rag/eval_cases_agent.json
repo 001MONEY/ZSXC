@@ -1,0 +1,132 @@
+[
+  {
+    "id": "a01",
+    "requirement": "板子上的小灯接在 PC13，想让它一秒闪一次，用最省事的写法",
+    "expect": {"pins": ["PC13"]}
+  },
+  {
+    "id": "a02",
+    "requirement": "PA8 出 2MHz 方波，占空比对半",
+    "expect": {"pins": ["PA8"], "pwm_list": [{"timer": "TIM1", "channels": 1, "freq_hz": 2000000}], "duty": 0.5}
+  },
+  {
+    "id": "a03",
+    "requirement": "PA8 和 PA11 一起输出 1kHz，两路要同步",
+    "expect": {"pins": ["PA8", "PA11"], "pwm_list": [{"timer": "TIM1", "channels": 2, "freq_hz": 1000}]}
+  },
+  {
+    "id": "a04",
+    "requirement": "TIM3 的 CH1 和 CH2 都要 500Hz 的 PWM",
+    "expect": {"pwm_list": [{"timer": "TIM3", "channels": 2, "freq_hz": 500}]}
+  },
+  {
+    "id": "a05",
+    "requirement": "串口1 用 115200，每秒打印一次传感器读数",
+    "expect": {"uart": {"instance": "USART1", "baud": 115200}}
+  },
+  {
+    "id": "a06",
+    "requirement": "串口每 500 毫秒发一句 hello world",
+    "expect": {"uart": {"instance": "USART1"}}
+  },
+  {
+    "id": "a07",
+    "requirement": "USART2 9600 波特率打印",
+    "expect": {"uart": {"instance": "USART2", "baud": 9600}}
+  },
+  {
+    "id": "a08",
+    "requirement": "TIM2 产生 1kHz 中断，中断里让 PA5 翻转",
+    "expect": {"pins": ["PA5"]}
+  },
+  {
+    "id": "a09",
+    "requirement": "PA0 接了个开关，按下点亮 PC13 的灯，PA0 配成上拉输入",
+    "expect": {"pins": ["PA0", "PC13"]}
+  },
+  {
+    "id": "a10",
+    "requirement": "四个按键接 PB12 PB13 PB14 PB15，OLED 上显示按键值",
+    "expect": {"components": ["keys", "oled"], "pins": ["PB12", "PB13", "PB14", "PB15"]}
+  },
+  {
+    "id": "a11",
+    "requirement": "按键消抖，按下就用 PB0 上的蜂鸣器响一声",
+    "expect": {"components": ["keys", "buzzer"]}
+  },
+  {
+    "id": "a12",
+    "requirement": "电位器接 PA1，OLED 显示百分比",
+    "expect": {"components": ["adc", "oled"], "pins": ["PA1"]}
+  },
+  {
+    "id": "a13",
+    "requirement": "PA0 电位器做 ADC，DMA 采 8 点取平均，串口每 100ms 打印",
+    "expect": {"components": ["adc"], "uart": {"instance": "USART1"}}
+  },
+  {
+    "id": "a14",
+    "requirement": "OLED 上显示 hello",
+    "expect": {"components": ["oled"]}
+  },
+  {
+    "id": "a15",
+    "requirement": "1ms 调度骨架 + 串口命令行",
+    "expect": {"components": ["sched", "serial_cmd"], "uart": {"instance": "USART1"}}
+  },
+  {
+    "id": "a16",
+    "requirement": "串口接收命令，能 help 和 info",
+    "expect": {"components": ["serial_cmd"]}
+  },
+  {
+    "id": "a17",
+    "requirement": "STM32F103RBT6，PA8 输出 1kHz PWM",
+    "expect": {"pins": ["PA8"], "pwm_list": [{"timer": "TIM1", "channels": 1, "freq_hz": 1000}]}
+  },
+  {
+    "id": "a18",
+    "requirement": "F103C8T6：PA8 1kHz PWM，PC13 每 500ms 翻转，USART1 115200 打印",
+    "expect": {"pins": ["PA8", "PC13"], "uart": {"instance": "USART1", "baud": 115200}}
+  },
+  {
+    "id": "a19",
+    "requirement": "PA9 输出 1kHz PWM",
+    "expect": {"pins": ["PA9"], "pwm_list": [{"timer": "TIM1", "channels": 1, "freq_hz": 1000}]}
+  },
+  {
+    "id": "a20",
+    "requirement": "PA8 3kHz，占空比 30%",
+    "expect": {"pins": ["PA8"], "pwm_list": [{"timer": "TIM1", "channels": 1, "freq_hz": 3000}], "duty": 0.3}
+  },
+  {
+    "id": "a21",
+    "requirement": "TIM1 四个通道 CH1~CH4 都输出 250Hz",
+    "expect": {"pwm_list": [{"timer": "TIM1", "channels": 4, "freq_hz": 250}]}
+  },
+  {
+    "id": "a22",
+    "requirement": "用 SPI 驱动 W25Q64，读 JEDEC ID",
+    "expect": {"refuse": ["SPI"]}
+  },
+  {
+    "id": "a23",
+    "requirement": "CAN 总线 500k 收发",
+    "expect": {"refuse": ["CAN"]}
+  },
+  {
+    "id": "a24",
+    "requirement": "每 10ms 翻转 PB0",
+    "expect": {"pins": ["PB0"]}
+  },
+  {
+    "id": "a25",
+    "requirement": "PA1 出 50Hz 舵机 PWM，脉宽 7.5%",
+    "expect": {"pins": ["PA1"], "pwm_list": [{"timer": "TIM2", "channels": 1, "freq_hz": 50}], "duty": 0.075}
+  },
+  {
+    "id": "a26",
+    "requirement": "按键 PB12 PB13 + 蜂鸣器 PB0 + OLED，按键响了还要显示",
+    "expect": {"components": ["keys", "buzzer", "oled"], "pins": ["PB12", "PB13"]}
+  }
+]

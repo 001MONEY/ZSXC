@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import re
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +20,51 @@ from pathlib import Path
 from ..core.config import WORKSPACE_ROOT, get_llm
 from ..build.keil import BuildResult
 from .tools import WorkspaceSession
+
+
+class _TokenCounter:
+    """统计一次 agent 运行的 token（LangChain 回调，兼容 OpenAI/百炼两种返回）。"""
+
+    def __init__(self) -> None:
+        from langchain_core.callbacks import BaseCallbackHandler
+
+        counter = self
+
+        class _Handler(BaseCallbackHandler):
+            def on_llm_end(self, response, **kwargs):  # noqa: ANN001
+                usage = {}
+                output = getattr(response, "llm_output", None) or {}
+                usage = output.get("token_usage") or output.get("usage") or {}
+                if not usage:
+                    for batch in getattr(response, "generations", []) or []:
+                        for gen in batch:
+                            meta = getattr(getattr(gen, "message", None), "usage_metadata", None)
+                            if meta:
+                                usage = meta
+                                break
+                        if usage:
+                            break
+                if usage:
+                    counter.calls += 1
+                    counter.input += int(usage.get("prompt_tokens") or usage.get("input_tokens") or 0)
+                    counter.output += int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
+
+        self._handler = _Handler()
+        self.calls = 0
+        self.input = 0
+        self.output = 0
+
+    @property
+    def handler(self):
+        return self._handler
+
+    def summary(self) -> dict:
+        return {
+            "calls": self.calls,
+            "input": self.input,
+            "output": self.output,
+            "total": self.input + self.output,
+        }
 
 SYSTEM_PROMPT = """你是 STM32 AI 开发助手，目标是把中文需求变成**可编译**的 STM32F103 工程。
 
@@ -35,6 +81,16 @@ SYSTEM_PROMPT = """你是 STM32 AI 开发助手，目标是把中文需求变成
    用 stm32_doc_graph，例如 stm32_doc_graph("calls", "HAL_UART_Init")、
    stm32_doc_graph("peripheral", "TIM1")。
 3. 规格化：把需求写成 generate_application 的 JSON 规格，**不要自己手写 main.c**。
+   需求里出现下面这些词，**必须**写对应字段，否则等于没实现：
+   | 需求关键词 | 规格字段 |
+   | --- | --- |
+   | 按键 / 消抖 | `"keys": {"pins": ["PB12","PB13"], "debounce_ms": 20}` |
+   | 蜂鸣器 / 音调 | `"buzzer": {"pin": "PB0"}`（自动占用一个 PWM 通道） |
+   | ADC / 电位器 / 旋钮 | `"adc": {"pin": "PA0", "samples": 8}` |
+   | OLED / 显示屏 | `"oled": {"instance": "I2C1"}`（自动配 PB6/PB7） |
+   | 串口命令行 / 接收命令 | `"uart": [...]` + `"serial_cmd": {"instance": "USART1"}` |
+   | 1 ms 调度 / 任务框架 | `"sched": true` |
+   | 多个引脚同频 PWM | `"pwm"` 数组写多条（同一定时器共享频率） |
 4. 生成：调用 generate_application。它会返回“计算核对”（PSC/ARR/CCR、BRR 误差、
    引脚复用）。若报“规格校验未通过”，按提示修正规格后重试。
 5. 编译：调用 build_project。失败时先 auto_fix_build 补齐模块/宏/路径；
@@ -43,6 +99,10 @@ SYSTEM_PROMPT = """你是 STM32 AI 开发助手，目标是把中文需求变成
 
 硬性规则：
 - 只能通过工具改动工作区文件；不要臆造未经验证的 HAL 函数与寄存器。
+- **检索最多 2 次**；同一个问题不要反复查，查到关键参数就进入生成。
+- `generate_application` 报校验错误时，按提示改规格重试，最多 3 次；不要绕开校验手写 main.c。
+- `build_project` 通过后**立即结束**：不要再 read_source / 重复检索 / 重复编译，直接用中文给出交付说明。
+- 编译失败时最多 `auto_fix_build` 2 轮，仍失败就说明原因并结束。
 - 生成器目前支持 GPIO、TIM PWM（同一定时器多通道，共频）、定时器更新中断、
   USART（发送轮询/DMA，接收中断 + 命令行）、ADC+DMA 滑动平均、I2C SSD1306 OLED，
   以及按键/蜂鸣器/1 ms 调度组件。SPI / CAN / 编码器 / 输入捕获未支持，
@@ -67,6 +127,11 @@ class AgentResult:
     transcript: list[str] = field(default_factory=list)
     report_path: Path | None = None
     error: str = ""
+    spec: object | None = None
+    fallback: bool = False
+    fix_rounds: int = 0
+    elapsed_s: float = 0.0
+    tokens: dict = field(default_factory=dict)
 
     def summary(self) -> str:
         lines = [f"需求：{self.requirement}"]
@@ -109,6 +174,7 @@ class DevAssistant:
 
     # ------------------------------------------------------------ 主流程
     def run(self, requirement: str) -> AgentResult:
+        started = time.monotonic()
         workspace = self.workspace or _default_workspace(requirement)
         workspace.mkdir(parents=True, exist_ok=True)
         session = WorkspaceSession(workspace=workspace, project_path=self.project)
@@ -116,15 +182,20 @@ class DevAssistant:
         try:
             agent = _create_agent(self.llm, session)
         except Exception as exc:  # 模型配置缺失：退回确定性流水线
-            return self._fallback(requirement, workspace, f"无法创建 Agent：{type(exc).__name__}: {exc}")
+            return self._fallback(
+                requirement, workspace, f"无法创建 Agent：{type(exc).__name__}: {exc}", started
+            )
 
+        counter = _TokenCounter()
         try:
             result = agent.invoke(
                 {"messages": [("user", _user_prompt(requirement, workspace))]},
-                config={"recursion_limit": self.max_steps},
+                config={"recursion_limit": self.max_steps, "callbacks": [counter.handler]},
             )
         except Exception as exc:
-            return self._fallback(requirement, workspace, f"Agent 执行失败：{type(exc).__name__}: {exc}")
+            return self._fallback(
+                requirement, workspace, f"Agent 执行失败：{type(exc).__name__}: {exc}", started
+            )
 
         messages = _messages_of(result)
         answer, transcript = _extract(messages)
@@ -140,6 +211,7 @@ class DevAssistant:
             transcript=transcript,
         )
         ok = bool(session.build and session.build.ok)
+        fix_rounds = sum(1 for line in transcript if line.startswith("← auto_fix_build"))
         return AgentResult(
             ok=ok,
             requirement=requirement,
@@ -150,9 +222,13 @@ class DevAssistant:
             actions=session.actions,
             transcript=transcript,
             report_path=report,
+            spec=session.spec,
+            fix_rounds=fix_rounds,
+            elapsed_s=round(time.monotonic() - started, 1),
+            tokens=counter.summary(),
         )
 
-    def _fallback(self, requirement: str, workspace: Path, reason: str) -> AgentResult:
+    def _fallback(self, requirement: str, workspace: Path, reason: str, started: float = 0.0) -> AgentResult:
         from ..build.pipeline import develop
 
         delivery = develop(requirement, workspace=workspace, project=self.project)
@@ -166,6 +242,9 @@ class DevAssistant:
             actions=delivery.steps,
             report_path=delivery.report_path,
             error=reason,
+            spec=delivery.spec,
+            fallback=True,
+            elapsed_s=round(time.monotonic() - started, 1) if started else 0.0,
         )
 
 

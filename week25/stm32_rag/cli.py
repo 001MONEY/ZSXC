@@ -298,6 +298,31 @@ def cmd_eval_graph(args) -> int:
     return 0
 
 
+def cmd_agent_eval(args) -> int:
+    """Agent 模式评测：成功率 / 自修复轮数 / 回退比例 / 耗时 / token。"""
+    from .assistant.eval_agent import format_report, run_agent_eval
+
+    only = [item.strip() for item in (args.only or "").split(",") if item.strip()]
+    report = run_agent_eval(
+        cases=args.cases,
+        limit=args.limit,
+        only=only or None,
+        build=not args.no_build,
+        max_steps=args.max_steps,
+        keep_previous=args.keep,
+        case_timeout=args.case_timeout,
+    )
+    print("\n" + format_report(report))
+    if args.out:
+        Path(args.out).expanduser().write_text(
+            json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        print(f"\n明细已写入：{args.out}")
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
 # ---------------------------------------------------------------- 开发助手
 
 def cmd_scaffold(args) -> int:
@@ -630,6 +655,18 @@ def main(argv: list[str] | None = None) -> int:
     p_eg.add_argument("-k", type=int, default=6)
     p_eg.add_argument("--json", action="store_true")
     p_eg.set_defaults(func=cmd_eval_graph)
+
+    p_ae = sub.add_parser("agent-eval", help="Agent 模式评测：成功率 / 自修复 / 回退 / 耗时 / token")
+    p_ae.add_argument("--cases", default=None, help="用例集（默认 eval_cases_agent.json）")
+    p_ae.add_argument("--limit", type=int, default=None, help="只跑前 N 条")
+    p_ae.add_argument("--only", default="", help="只跑指定 id，逗号分隔，如 a03,a21")
+    p_ae.add_argument("--max-steps", type=int, default=40, help="单个用例的 Agent 递归上限")
+    p_ae.add_argument("--case-timeout", type=float, default=300.0, help="单条用例超时秒数")
+    p_ae.add_argument("--no-build", action="store_true", help="只生成不编译（很快，但成功判定不可信）")
+    p_ae.add_argument("--keep", action="store_true", help="保留上一轮评测目录")
+    p_ae.add_argument("--out", default=None, help="把明细 JSON 写到文件")
+    p_ae.add_argument("--json", action="store_true", help="同时打印 JSON")
+    p_ae.set_defaults(func=cmd_agent_eval)
 
     # ---------------- 开发助手 ----------------
     p_scaffold = sub.add_parser("scaffold", help="生成可编译的 Keil 工程骨架")

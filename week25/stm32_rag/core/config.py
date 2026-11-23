@@ -219,6 +219,8 @@ def get_embeddings():
         check_embedding_ctx_length=False,  # 让接口自己按字符切，不做本地 token 校验
         dimensions=EMBED_DIM,
         chunk_size=EMBED_BATCH,
+        timeout=float(os.getenv("STM32_EMBED_TIMEOUT", "60")),
+        max_retries=int(os.getenv("STM32_EMBED_RETRIES", "1")),
     )
 
 
@@ -237,6 +239,9 @@ def get_llm(**overrides):
         "api_key": lab.DASHSCOPE_API_KEY,
         "temperature": 0,
         "max_tokens": ANSWER_MAX_TOKENS,
+        # 网络抽风时快速失败，别让 agent 评测卡在一条请求上
+        "timeout": float(os.getenv("STM32_LLM_TIMEOUT", "120")),
+        "max_retries": int(os.getenv("STM32_LLM_RETRIES", "1")),
     }
     if not thinking_enabled():
         params["extra_body"] = {"enable_thinking": False}

@@ -584,7 +584,53 @@ LLM 抽实体/关系贵、不可复现，而你这批语料里 **6033/7514 个�
 
 ---
 
-## 10. 交付物
+## 10. Agent 模式评测
+
+`develop` 是规则解析：认“引脚 + 频率 + 关键词”，口语化、缺引脚、同一定时器多通道这类需求它解不出来。
+agent 值不值得，要用同一批需求对比，而不是看单次演示。
+
+- **用例**：`stm32_rag/eval_cases_agent.json`，26 条自由说法；含 2 条当前不支持的外设（SPI / CAN），考“该拒绝时能否明确拒绝”
+- **判分**：编译通过 **且** 结构匹配 —— 引脚、PWM 的定时器/通道数/频率、占空比、串口实例与波特率、组件文件
+- **参数**：`qwen3.8-flash`（`STM32_CHAT_MODEL`），`max_steps=25`，单条 300 s 超时；UV4 全量编译
+- **复现**：`python -m stm32_rag agent-eval --max-steps 25 --out agent_eval_report.json`
+- 注：首批用默认的 `deepseek-v4.1-flash` 跑到第 6 条额度耗尽（403），改用 `qwen3.8-flash` 跑完 26 条；
+  工具轨迹与工程在 `workspaces/agent_eval/`，逐条明细（缺失项 / token / 耗时）在 `stm32_rag/agent_eval_report.json`
+
+### 10.1 汇总
+
+| 指标 | develop | agent |
+| --- | --- | --- |
+| 编译通过 | 24/26 | **26/26** |
+| 需求匹配 | **20/26** | 18/26 |
+| 一次成功（无修复、无回退） | — | 16/26 |
+| 回退 develop | — | 2/26（递归上限后自动回退） |
+| 自修复总轮数 | — | 0 |
+| 平均耗时 / 条 | **3.8 s** | 28.3 s |
+| 平均 token / 条 | 0 | 25.2 k（26 条共 654 k） |
+| 平均 LLM 调用 / 条 | 0 | 5.9 |
+
+### 10.2 谁多解了什么
+
+| 情况 | 用例 | 说明 |
+| --- | --- | --- |
+| 两边都对 | a01 a02 a03 a05 a06 a07 a08 a09 a13 a17 a19 a20 a22 a23 a24（15 条） | 规则恰好能覆盖的说法 |
+| **只有 agent 对** | **a04 · a18 · a21** | a04：要求 TIM3_CH1+CH2，却没给引脚 → agent 查复用表选 PA6/PA7；a18：PWM + 定时翻转 + 串口三合一；a21：TIM1 四通道 250 Hz |
+| 只有 develop 对 | a11 a12 a14 a15 a16（5 条） | 需要写 `keys / adc / oled / sched / serial_cmd` 组件字段，agent 漏填 |
+| 两边都没对 | a10 a25 a26 | a25 的“脉宽 7.5%”不在规则词表；a10/a26 是多组件组合，agent 也只写了一部分 |
+
+### 10.3 怎么读这组数
+
+1. **agent 的增量在“隐含信息”**：需求没给引脚、要求同一定时器多通道、多外设拼在一起时，agent 会先查复用/时钟再下笔，
+   develop 只能在默认引脚上直接失败。那 3 条“只有 agent 对”就是 agent 存在的理由；
+2. **agent 的短板在“规格完整性”**：碰到按键/ADC/OLED/命令行/调度，模型经常只写 `uart`/`pwm` 而漏掉组件字段。
+   提示词已加“关键词 → 字段”映射表，仍不稳；下一步应在工具侧做前置校验（需求命中组件词但规格缺字段 → 拒绝生成并回给建议字段）；
+3. **成本差 7 倍**：agent 28.3 s / 25 k token vs develop 3.8 s / 0 token。所以线上流程保持
+   “先 develop，规则解不出再上 agent，agent 失败自动回退 develop”；
+4. **自修复本次未被触发**：26 条全部一次编译通过，`auto_fix_build` 0 轮；历史真实案例是 6 条 L6218E 补 TIM 模块（见 5.2）。
+
+---
+
+## 11. 交付物
 
 ```text
 workspaces/pwm_pa8/
@@ -602,9 +648,9 @@ CubeMX 工程里额外有 `.stm32rag/spec.json`（多轮累积的规格）。
 
 ---
 
-## 11. 已知边界与后续路线
+## 12. 已知边界与后续路线
 
-### 11.1 边界
+### 12.1 边界
 
 1. **外设范围**：GPIO（输出/输入/外部中断）、TIM PWM（同一定时器多通道，共频）、TIM 更新中断、
    USART（发送轮询/DMA，接收中断+命令行）、ADC1（DMA + 滑动平均）、I2C1/I2C2 主发（SSD1306）、
@@ -621,7 +667,7 @@ CubeMX 工程里额外有 `.stm32rag/spec.json`（多轮累积的规格）。
    组件引脚取“关键词之后出现的引脚”；更自由的说法用 `agent` 或直接给 JSON 规格；
 8. **嵌入维度固定**：换 `STM32_EMBED_MODEL` / `STM32_EMBED_DIM` 必须换集合名重建。
 
-### 11.2 后续路线（按板子需求排序）
+### 12.2 后续路线（按板子需求排序）
 
 板子配置：4 个按键（低电平有效）、电位器（ADC）、无源蜂鸣器（PWM）、SSD1306 0.96" OLED（I2C）。
 
@@ -662,6 +708,7 @@ CubeMX 工程里额外有 `.stm32rag/spec.json`（多轮累积的规格）。
 | `graph-docs --build` / `--symbol HAL_GPIO_Init` / `--chunk ID` / `--expand ID` | 文档关系图（GraphRAG） |
 | `graph-docs --calls X` / `--callers X` / `--peripheral TIM1` | 调用链 / 反向调用 / 外设相关章节 |
 | `eval-graph [-k 6]` | 跨语料 A/B：期望来源能否进 top-k |
+| `agent-eval [--limit N] [--only a03,a21] [--out x.json]` | Agent 评测：成功率 / 自修复 / 回退 / 耗时 / token |
 | `mcp --workspace DIR` | 启动 Keil MCP Server |
 
 ---
