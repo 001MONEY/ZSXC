@@ -19,8 +19,8 @@ from pathlib import Path
 
 import pymupdf
 
-from .cleaner import clean_text, normalize_space
-from .config import DB_DIR, PDF_PATH, BuildConfig
+from ..core.cleaner import clean_text, normalize_space
+from ..core.config import DB_DIR, PDF_PATH, BuildConfig
 
 _NUM_RE = re.compile(r"^(\d+(?:\.\d+)*)\s+(.*)$")
 _SKIP_TITLE_RE = re.compile(r"^(table|figure)\s+\d+", re.IGNORECASE)

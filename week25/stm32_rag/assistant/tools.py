@@ -17,7 +17,7 @@ from pathlib import Path
 
 from langchain_core.tools import BaseTool, tool
 
-from .codegen import (
+from ..gen.codegen import (
     AppSpec,
     GpioSpec,
     LoopSpec,
@@ -26,12 +26,12 @@ from .codegen import (
     UartSpec,
     plan_application,
 )
-from .config import DEFAULT_DEVICE, DEFAULT_HSE, DEFAULT_SYSCLK, WORKSPACE_ROOT
-from .keil import BuildResult, KeilBuilder, suggest_fixes
-from .mcu import USART_PINS, parse_pin, resolve_device
-from .pipeline import _sync_project_config, apply_quick_fix
-from .project import KeilProject, find_project
-from .scaffold import scaffold_project
+from ..core.config import DEFAULT_DEVICE, DEFAULT_HSE, DEFAULT_SYSCLK, WORKSPACE_ROOT
+from ..build.keil import BuildResult, KeilBuilder, suggest_fixes
+from ..gen.mcu import USART_PINS, parse_pin, resolve_device
+from ..build.pipeline import _sync_project_config, apply_quick_fix
+from ..gen.project import KeilProject, find_project
+from ..gen.scaffold import scaffold_project
 
 
 @dataclass
@@ -53,7 +53,7 @@ class WorkspaceSession:
     def __post_init__(self) -> None:
         """CubeMX 工程里优先用 .ioc 里的真实器件型号。"""
         try:
-            from .cubemx import find_ioc, parse_ioc
+            from ..gen.cubemx import find_ioc, parse_ioc
 
             ioc = find_ioc(self.workspace)
             if ioc is not None:
@@ -105,7 +105,7 @@ class WorkspaceSession:
             return f"工作区 {self.workspace} 里还没有 Keil 工程（可用 generate_application 自动创建）"
         lines = [project.describe()]
         try:
-            from .cubemx import find_ioc, parse_ioc
+            from ..gen.cubemx import find_ioc, parse_ioc
 
             ioc = find_ioc(self.workspace)
             if ioc is not None:
@@ -146,7 +146,7 @@ class WorkspaceSession:
         changed: list[str] = []
 
         # CubeMX 工程：只往 USER CODE 段插入，不覆盖 CubeMX 生成的代码
-        from .cubemx import apply_to_project, find_ioc
+        from ..gen.cubemx import apply_to_project, find_ioc
 
         main_c = self.workspace / "Core" / "Src" / "main.c"
         cubemx_mode = bool(
@@ -360,7 +360,7 @@ class WorkspaceSession:
     def graph_query(self, kind: str, target: str = "") -> str:
         """查 Neo4j 器件知识图谱（引脚复用 / 定时器 / 串口 / DMA / 中断）。"""
         try:
-            from .graph import GraphStore
+            from ..graphs.graph import GraphStore
         except Exception as exc:  # 驱动缺失时不能阻断生成流程
             return f"图谱不可用：{exc}"
         store = self._graph
@@ -382,7 +382,7 @@ class WorkspaceSession:
     def doc_graph_query(self, kind: str, target: str = "") -> str:
         """查文档知识图谱（符号 / 调用链 / 外设 / 邻域扩展）。"""
         try:
-            from .graph_docs import doc_graph
+            from ..graphs.graph_docs import doc_graph
         except Exception as exc:  # 驱动缺失时不能阻断生成流程
             return f"文档图谱不可用：{exc}"
         store = self._doc_graph
@@ -401,10 +401,10 @@ class WorkspaceSession:
     # ------------------------------------------------------------ 检索
     def search(self, query: str, sources: str = "auto", k: int = 6) -> str:
         try:
-            from .config import RetrieveConfig
-            from .index import Stm32Index
-            from .retrieve import HybridRetriever
-            from .router import MultiSourceRetriever
+            from ..core.config import RetrieveConfig
+            from ..corpus.index import Stm32Index
+            from ..rag.retrieve import HybridRetriever
+            from ..rag.router import MultiSourceRetriever
         except Exception as exc:  # pragma: no cover - 依赖缺失时不影响生成
             return f"检索不可用：{exc}"
 
@@ -415,7 +415,7 @@ class WorkspaceSession:
             else:
                 names = [item.strip() for item in sources.split(",") if item.strip()]
                 if len(names) == 1:
-                    from .config import SOURCE_COLLECTIONS
+                    from ..core.config import SOURCE_COLLECTIONS
 
                     retriever = HybridRetriever(index=Stm32Index(collection=SOURCE_COLLECTIONS.get(names[0], names[0])), cfg=cfg)
                 else:
@@ -506,6 +506,6 @@ def spec_from_dict(data: dict, session: WorkspaceSession) -> AppSpec:
 
 
 def default_workspace(requirement: str) -> Path:
-    from .pipeline import _slugify
+    from ..build.pipeline import _slugify
 
     return WORKSPACE_ROOT / _slugify(requirement)

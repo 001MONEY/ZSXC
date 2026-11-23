@@ -16,8 +16,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from .config import WORKSPACE_ROOT, get_llm
-from .keil import BuildResult
+from ..core.config import WORKSPACE_ROOT, get_llm
+from ..build.keil import BuildResult
 from .tools import WorkspaceSession
 
 SYSTEM_PROMPT = """你是 STM32 AI 开发助手，目标是把中文需求变成**可编译**的 STM32F103 工程。
@@ -150,7 +150,7 @@ class DevAssistant:
         )
 
     def _fallback(self, requirement: str, workspace: Path, reason: str) -> AgentResult:
-        from .pipeline import develop
+        from ..build.pipeline import develop
 
         delivery = develop(requirement, workspace=workspace, project=self.project)
         return AgentResult(
@@ -255,7 +255,7 @@ def _write_agent_report(
         "",
     ]
     if session.spec is not None:
-        from .codegen import spec_summary
+        from ..gen.codegen import spec_summary
 
         import json
 

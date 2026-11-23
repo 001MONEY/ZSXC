@@ -19,7 +19,7 @@ import shutil
 from pathlib import Path
 from string import Template
 
-from .config import HAL_DRIVER_DIR, HAL_ROOT
+from ..core.config import HAL_DRIVER_DIR, HAL_ROOT
 from .mcu import Device, resolve_device
 from .project import KeilProject
 

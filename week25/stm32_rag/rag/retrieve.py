@@ -14,8 +14,8 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .config import RetrieveConfig, get_llm
-from .index import Stm32Index
+from ..core.config import RetrieveConfig, get_llm
+from ..corpus.index import Stm32Index
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+(?:_[a-z0-9]+)*")
 
@@ -241,7 +241,7 @@ class GraphExpander:
         if self._store is None and not self._checked:
             self._checked = True  # 只探测一次，Neo4j 没起就不再重试
             try:
-                from .graph_docs import doc_graph
+                from ..graphs.graph_docs import doc_graph
 
                 self._store = doc_graph()
             except Exception:

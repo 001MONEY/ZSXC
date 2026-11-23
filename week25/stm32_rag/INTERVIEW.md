@@ -125,7 +125,7 @@ flowchart TD
 **Q10：这个项目是你独立做的吗？**
 实事求是：架构设计、模块拆分、调试和取舍是我做的，编码有 AI 辅助。
 补一句“核心文件我可以逐行讲”，然后准备 2~3 个文件：
-`codegen.py` 的校验、`keil.py` 的日志解析、`cubemx.py` 的增量插入。
+`gen/codegen.py` 的校验、`build/keil.py` 的日志解析、`gen/cubemx.py` 的增量插入。
 
 **Q11：换芯片 / 换 HAL 版本怎么办？**
 器件差异收敛在 `mcu.DEVICES`（内存、端口、定时器）和引脚复用表；

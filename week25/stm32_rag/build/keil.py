@@ -21,7 +21,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .config import BUILD_TIMEOUT, KILL_STALE_UV4, UV4_PATH
+from ..core.config import BUILD_TIMEOUT, KILL_STALE_UV4, UV4_PATH
 
 EXIT_CODES = {
     0: "无错误、无警告",
@@ -446,7 +446,7 @@ def _outputs(project: Path) -> tuple[Path, Path]:
     out_dir = project.parent / "Objects"
     name = project.stem
     try:
-        from .project import KeilProject
+        from ..gen.project import KeilProject
 
         obj = KeilProject(project)
         name = obj.output_name or name

@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from .config import FIGURES_DIR, get_llm
+from ..core.config import FIGURES_DIR, get_llm
 from .retrieve import Hit, HybridRetriever
 
 SYSTEM_PROMPT = """你是 STM32F10xxx 参考手册（RM0008）的检索问答助手。

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # ---------------------------------------------------------------- 路径
-PACKAGE_DIR = Path(__file__).resolve().parent
+PACKAGE_DIR = Path(__file__).resolve().parent.parent  # stm32_rag/
 PROJECT_DIR = PACKAGE_DIR.parent  # week25
 DEFAULT_LAB_CONFIG_DIR = PROJECT_DIR.parent / "week23" / "20261027"
 

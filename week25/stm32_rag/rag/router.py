@@ -18,8 +18,8 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 
-from .config import SOURCE_COLLECTIONS, RetrieveConfig, get_llm
-from .index import Stm32Index
+from ..core.config import SOURCE_COLLECTIONS, RetrieveConfig, get_llm
+from ..corpus.index import Stm32Index
 from .ingest import load_registry
 from .retrieve import GraphExpander, Hit, HybridRetriever, rerank_hits
 

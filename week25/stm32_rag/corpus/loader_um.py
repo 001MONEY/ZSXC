@@ -22,8 +22,8 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 
-from .chunker import count_tokens, pack_text
-from .config import UM_PDF_PATH, BuildConfig
+from ..core.chunker import count_tokens, pack_text
+from ..core.config import UM_PDF_PATH, BuildConfig
 from .loader import Section, load_sections
 
 MAX_TOKENS = 480

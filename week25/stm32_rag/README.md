@@ -148,18 +148,35 @@ HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 
 ## 3. 架构与模块
 
+```
+stm32_rag/
+├─ __init__.py        # 对外 API（from stm32_rag import ...）
+├─ __main__.py        # python -m stm32_rag
+├─ cli.py             # 全部子命令入口
+├─ mcp_keil_server.py # Keil MCP Server（11 个工具）
+├─ core/              # 全局配置 + 文本清洗 + 切块
+├─ corpus/            # 语料加载（PDF / HAL / Markdown）+ 插图 + Chroma 建库
+├─ rag/               # 混合检索 / 路由 / 回答 / 上传入库 / 评测
+├─ graphs/            # 器件事实图 + 文档关系图（Neo4j）
+├─ gen/               # 器件表 / 代码生成 / 脚手架 / .uvprojx / CubeMX
+├─ build/             # UV4 编译闭环 + 确定性流水线
+└─ assistant/         # 工作区会话（工具实现）+ LangChain Agent
+```
+
 | 能力 | 模块 | 职责 |
 | --- | --- | --- |
-| 手册知识库 | `loader*.py` / `chunker.py` / `index.py` | PDF/源码/例程 → 切块 → Chroma |
-| 混合检索 | `retrieve.py` / `router.py` / `answer.py` | 向量 + BM25 → RRF → LLM 重排 → 带出处回答 |
-| 器件事实库 | `mcu.py` | 引脚复用、DMA 映射、TIMxCLK、PSC/ARR、UART BRR |
-| 工程分析 | `project.py` | 读写 `.uvprojx`：器件/分组/文件/宏/头文件路径 |
-| 代码生成 | `codegen.py` | 先校验再生成 `main.c / main.h / stm32f1xx_it.c` |
-| 工程脚手架 | `scaffold.py` | 从 vendor 生成可编译工程（HAL 按模块裁剪） |
-| 编译诊断 | `keil.py` | `UV4 -b`、日志解析、错误→修复动作映射 |
-| 确定性编排 | `pipeline.py` | 需求解析 → 生成 → 编译 → 自修复 → 报告 |
-| LLM 编排 | `agent.py` + `tools.py` | LangChain `create_agent`，7 个工具 |
-| CubeMX 兼容 | `cubemx.py` | 解析 `.ioc`、增量插入、多轮规格累积 |
+| 手册知识库 | `corpus/loader*.py` / `core/chunker.py` / `corpus/index.py` | PDF/源码/例程 → 切块 → Chroma |
+| 混合检索 | `rag/retrieve.py` / `rag/router.py` / `rag/answer.py` | 向量 + BM25 → RRF → LLM 重排 → 带出处回答 |
+| 上传与评测 | `rag/ingest.py` / `rag/evaluate.py` | MinerU 入库、评测集与 A/B |
+| 器件事实库 | `gen/mcu.py` | 引脚复用、DMA 映射、TIMxCLK、PSC/ARR、UART BRR |
+| 工程分析 | `gen/project.py` | 读写 `.uvprojx`：器件/分组/文件/宏/头文件路径 |
+| 代码生成 | `gen/codegen.py` | 先校验再生成 `main.c / main.h / stm32f1xx_it.c` |
+| 工程脚手架 | `gen/scaffold.py` | 从 vendor 生成可编译工程（HAL 按模块裁剪） |
+| CubeMX 兼容 | `gen/cubemx.py` | 解析 `.ioc`、增量插入、多轮规格累积 |
+| 编译诊断 | `build/keil.py` | `UV4 -b`、日志解析、错误→修复动作映射 |
+| 确定性编排 | `build/pipeline.py` | 需求解析 → 生成 → 编译 → 自修复 → 报告 |
+| 知识图谱 | `graphs/graph.py` / `graphs/graph_docs.py` | 器件事实图 / 文档关系图 |
+| LLM 编排 | `assistant/agent.py` + `assistant/tools.py` | LangChain `create_agent`，9 个工具 |
 | MCP Server | `mcp_keil_server.py` | 11 个 MCP 工具 |
 | CLI | `cli.py` | 全部子命令入口 |
 

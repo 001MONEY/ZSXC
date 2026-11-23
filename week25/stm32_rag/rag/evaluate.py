@@ -11,7 +11,7 @@ import re
 from dataclasses import replace
 from pathlib import Path
 
-from .config import PACKAGE_DIR, RetrieveConfig
+from ..core.config import PACKAGE_DIR, RetrieveConfig
 from .retrieve import HybridRetriever
 
 CASES_PATH = PACKAGE_DIR / "eval_cases.json"

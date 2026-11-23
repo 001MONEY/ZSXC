@@ -27,7 +27,7 @@ import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 
-from .config import DB_DIR, NEO4J_DATABASE, NEO4J_PASSWORD, NEO4J_URI, NEO4J_USER, SOURCE_COLLECTIONS
+from ..core.config import DB_DIR, NEO4J_DATABASE, NEO4J_PASSWORD, NEO4J_URI, NEO4J_USER, SOURCE_COLLECTIONS
 from .graph import _WRITE_WORDS  # 复用只读查询守卫，两个图的写保护口径保持一致
 
 DOC_LABELS = ("Doc", "Chapter", "Section", "Chunk", "Symbol", "Peripheral")
@@ -139,7 +139,7 @@ class DocGraphStore:
     # ------------------------------------------------------------ 建图
     def build(self, reset: bool = False) -> DocGraphResult:
         """从 Chroma 的 metadata 生成文档图；`MERGE` 幂等，边每次全量重建。"""
-        from .index import shared_client
+        from ..corpus.index import shared_client
 
         client = shared_client(DB_DIR)
         existing = {c.name for c in client.list_collections()}

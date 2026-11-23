@@ -17,8 +17,8 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 
-from .chunker import count_tokens, pack_text
-from .config import HAL_DRIVER_DIR, HAL_EXAMPLES_DIR, HAL_VERSION, BuildConfig
+from ..core.chunker import count_tokens, pack_text
+from ..core.config import HAL_DRIVER_DIR, HAL_EXAMPLES_DIR, HAL_VERSION, BuildConfig
 
 MAX_TOKENS = 480
 OVERLAP_TOKENS = 64

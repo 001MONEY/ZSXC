@@ -25,10 +25,10 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from .config import DEFAULT_DEVICE, WORKSPACE_ROOT
-from .keil import KeilBuilder, suggest_fixes
-from .project import KeilProject, find_project
-from .scaffold import scaffold_project
+from .core.config import DEFAULT_DEVICE, WORKSPACE_ROOT
+from .build.keil import KeilBuilder, suggest_fixes
+from .gen.project import KeilProject, find_project
+from .gen.scaffold import scaffold_project
 
 mcp = FastMCP("keil-mdk")
 

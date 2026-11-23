@@ -23,25 +23,31 @@
     result = assistant.run("配置 PA8 输出 1MHz PWM")  # LLM 编排，失败自动回退
 """
 
-from .agent import AgentResult, DevAssistant
-from .answer import RagAnswer, answer, format_context
-from .chunker import build_documents, chunk_sections, count_tokens, pack_text
-from .codegen import AppSpec, CodePlan, GpioSpec, PwmSpec, TimerSpec, UartSpec, plan_application
-from .config import BuildConfig, RetrieveConfig, describe, get_embeddings, get_llm
-from .cubemx import CubeMXInfo, PatchResult, apply_to_project, parse_ioc, find_ioc
-from .evaluate import check_anchors, load_cases, run_eval
-from .figures import Figure, extract_figures, figure_documents
-from .graph import GraphResult, GraphStore, graph_available
-from .graph_docs import DocGraphResult, DocGraphStore, doc_graph_available
-from .index import Stm32Index
-from .keil import BuildIssue, BuildResult, KeilBuilder, build_project, parse_log, suggest_fixes
-from .loader import Section, load_sections
-from .mcu import Device, Pin, pwm_timing, resolve_device, timer_clock, uart_brr
-from .pipeline import Delivery, develop, parse_requirement
-from .project import KeilProject, ProjectFile, find_project
-from .retrieve import BM25, Hit, HybridRetriever, tokenize
-from .scaffold import scaffold_project
-from .tools import WorkspaceSession
+from .core.chunker import build_documents, chunk_sections, count_tokens, pack_text
+from .core.config import BuildConfig, RetrieveConfig, describe, get_embeddings, get_llm
+
+from .corpus.figures import Figure, extract_figures, figure_documents
+from .corpus.index import Stm32Index
+from .corpus.loader import Section, load_sections
+
+from .rag.answer import RagAnswer, answer, format_context
+from .rag.evaluate import check_anchors, load_cases, run_eval
+from .rag.retrieve import BM25, Hit, HybridRetriever, tokenize
+
+from .graphs.graph import GraphResult, GraphStore, graph_available
+from .graphs.graph_docs import DocGraphResult, DocGraphStore, doc_graph_available
+
+from .gen.codegen import AppSpec, CodePlan, GpioSpec, PwmSpec, TimerSpec, UartSpec, plan_application
+from .gen.cubemx import CubeMXInfo, PatchResult, apply_to_project, parse_ioc, find_ioc
+from .gen.mcu import Device, Pin, pwm_timing, resolve_device, timer_clock, uart_brr
+from .gen.project import KeilProject, ProjectFile, find_project
+from .gen.scaffold import scaffold_project
+
+from .build.keil import BuildIssue, BuildResult, KeilBuilder, build_project, parse_log, suggest_fixes
+from .build.pipeline import Delivery, develop, parse_requirement
+
+from .assistant.agent import AgentResult, DevAssistant
+from .assistant.tools import WorkspaceSession
 
 __all__ = [
     "AgentResult",

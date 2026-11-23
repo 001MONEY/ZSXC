@@ -16,7 +16,7 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 
-from .chunker import count_tokens, pack_text
+from ..core.chunker import count_tokens, pack_text
 
 MAX_TOKENS = 480
 OVERLAP_TOKENS = 64

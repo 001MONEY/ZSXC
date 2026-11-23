@@ -18,7 +18,7 @@ import tiktoken
 from langchain_core.documents import Document
 
 from .config import PDF_PATH, BuildConfig
-from .loader import Section, load_sections
+from ..corpus.loader import Section, load_sections
 
 _ENC = tiktoken.get_encoding("cl100k_base")
 

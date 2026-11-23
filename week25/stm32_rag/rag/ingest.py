@@ -20,15 +20,15 @@ import subprocess
 import time
 from pathlib import Path
 
-from .config import (
+from ..core.config import (
     CUSTOM_SOURCES_FILE,
     MINERU_EXE,
     MINERU_MD_DIR,
     MINERU_TIER,
     get_embeddings,
 )
-from .index import Stm32Index
-from .loader_md import markdown_documents, summarize
+from ..corpus.index import Stm32Index
+from ..corpus.loader_md import markdown_documents, summarize
 
 _NOT_RUNNING_MARKERS = ("未在运行", "not running", "stopped", "no running")
 _JOB_RE = re.compile(r"(?:ID|id)[:：]\s*(\d+)")

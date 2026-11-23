@@ -13,8 +13,8 @@ from pathlib import Path
 import chromadb
 from langchain_core.documents import Document
 
-from .chunker import build_documents
-from .config import (
+from ..core.chunker import build_documents
+from ..core.config import (
     COLLECTION_NAME,
     DB_DIR,
     EMBED_DIM,

@@ -22,8 +22,8 @@ from pathlib import Path
 import pymupdf
 from langchain_core.documents import Document
 
-from .chunker import count_tokens
-from .config import FIGURES_DIR, PDF_PATH, BuildConfig
+from ..core.chunker import count_tokens
+from ..core.config import FIGURES_DIR, PDF_PATH, BuildConfig
 from .loader import build_anchors
 
 _CAPTION_RE = re.compile(r"^\s*Figure\s+(\d+)\.\s*(.+)$", re.MULTILINE)

@@ -29,8 +29,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .config import NEO4J_DATABASE, NEO4J_PASSWORD, NEO4J_URI, NEO4J_USER
-from .mcu import (
+from ..core.config import NEO4J_DATABASE, NEO4J_PASSWORD, NEO4J_URI, NEO4J_USER
+from ..gen.mcu import (
     APB2_TIMERS,
     DEVICES,
     DMA_MAP,

@@ -19,8 +19,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from .config import DEFAULT_DEVICE, DEFAULT_HSE, DEFAULT_SYSCLK, WORKSPACE_ROOT
-from .codegen import (
+from ..core.config import DEFAULT_DEVICE, DEFAULT_HSE, DEFAULT_SYSCLK, WORKSPACE_ROOT
+from ..gen.codegen import (
     AppSpec,
     CodePlan,
     GpioSpec,
@@ -31,9 +31,9 @@ from .codegen import (
     plan_application,
     spec_summary,
 )
-from .mcu import USART_PINS, Pin, resolve_device, timer_for_pin
-from .project import DEFAULT_GROUP, KeilProject, find_project
-from .scaffold import HAL_MODULE_SOURCES, enable_hal_conf, ensure_hal_modules, scaffold_project
+from ..gen.mcu import USART_PINS, Pin, resolve_device, timer_for_pin
+from ..gen.project import DEFAULT_GROUP, KeilProject, find_project
+from ..gen.scaffold import HAL_MODULE_SOURCES, enable_hal_conf, ensure_hal_modules, scaffold_project
 from .keil import BuildResult, KeilBuilder, QuickFix, suggest_fixes
 
 # ---------------------------------------------------------------- 需求解析
@@ -161,7 +161,7 @@ def parse_requirement(
     if is_pwm or (freq_match and pins and not is_irq):
         target_pin = pins[0] if pins else Pin("A", 8)
         if timer_instance:
-            from .mcu import channel_of_pin
+            from ..gen.mcu import channel_of_pin
 
             channel = channel_of_pin(target_pin, timer_instance)
             if channel is None:
@@ -364,7 +364,7 @@ def develop(
     """跑完整条流水线。"""
     # CubeMX 工程：没显式指定器件时，用 .ioc 里的真实型号
     if device is None and workspace is not None:
-        from .cubemx import find_ioc, parse_ioc
+        from ..gen.cubemx import find_ioc, parse_ioc
 
         probe = find_ioc(workspace)
         if probe is not None:
@@ -412,7 +412,7 @@ def develop(
         steps.append(f"生成 Keil 工程：{project_obj.path}（器件 {spec.device.name}）")
 
     # ---- 写代码（CubeMX 工程走增量插入，不覆盖生成代码）
-    from .cubemx import apply_to_project, find_ioc
+    from ..gen.cubemx import apply_to_project, find_ioc
 
     main_c = workspace / "Core" / "Src" / "main.c"
     cubemx_mode = bool(

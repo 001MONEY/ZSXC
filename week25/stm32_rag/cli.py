@@ -31,7 +31,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from .config import (
+from .core.config import (
     DS_PDF_PATH,
     PDF_PATH,
     SOURCE_COLLECTIONS,
@@ -39,7 +39,7 @@ from .config import (
     RetrieveConfig,
     describe,
 )
-from .index import Stm32Index
+from .corpus.index import Stm32Index
 
 
 def ds_config(page_range=None) -> BuildConfig:
@@ -57,29 +57,29 @@ def ds_config(page_range=None) -> BuildConfig:
 def source_documents(source: str, pages=None, no_figures: bool = False):
     """按来源产出 (小节/统计文案, Document 列表)。"""
     if source == "rm":
-        from .chunker import build_documents
+        from .core.chunker import build_documents
 
         cfg = BuildConfig(page_range=pages, include_figures=not no_figures)
         sections, docs = build_documents(PDF_PATH, cfg, source_name=PDF_PATH.name, doc="RM0008")
         return f"RM0008：小节 {len(sections)}", docs
     if source == "ds":
-        from .chunker import build_documents
+        from .core.chunker import build_documents
 
         cfg = ds_config(pages)
         sections, docs = build_documents(DS_PDF_PATH, cfg, source_name=DS_PDF_PATH.name, doc="DS")
         return f"DS：小节 {len(sections)}", docs
     if source == "um":
-        from .loader_um import summarize, um_config, um_documents
+        from .corpus.loader_um import summarize, um_config, um_documents
 
         docs = um_documents(cfg=dataclasses.replace(um_config(), page_range=pages))
         return summarize(docs), docs
     if source == "hal":
-        from .loader_hal import hal_documents, summarize
+        from .corpus.loader_hal import hal_documents, summarize
 
         docs = hal_documents()
         return summarize(docs), docs
     if source == "examples":
-        from .loader_hal import examples_documents, summarize
+        from .corpus.loader_hal import examples_documents, summarize
 
         docs = examples_documents()
         return summarize(docs), docs
@@ -146,7 +146,7 @@ def cmd_build(args) -> int:
 
 
 def cmd_figures(args) -> int:
-    from .figures import extract_figures, summarize
+    from .corpus.figures import extract_figures, summarize
 
     cfg = BuildConfig(page_range=parse_pages(args.pages), figure_dpi=args.dpi)
     figures = extract_figures(PDF_PATH, cfg, force=args.force)
@@ -162,7 +162,7 @@ def cmd_stats(args) -> int:
     elif args.source in SOURCE_COLLECTIONS:
         collection = SOURCE_COLLECTIONS[args.source]
     else:
-        from .ingest import load_registry
+        from .rag.ingest import load_registry
 
         collection = str(load_registry().get(args.source, {}).get("collection", "")) or args.source
     index = Stm32Index(collection=collection)
@@ -172,7 +172,7 @@ def cmd_stats(args) -> int:
 
 
 def cmd_ingest(args) -> int:
-    from .ingest import ingest, ingest_batch
+    from .rag.ingest import ingest, ingest_batch
 
     pdfs = args.pdf or []
     common = dict(
@@ -203,7 +203,7 @@ def cmd_ingest(args) -> int:
 
 
 def _retriever(args):
-    from .retrieve import HybridRetriever
+    from .rag.retrieve import HybridRetriever
 
     cfg = RetrieveConfig()
     if getattr(args, "no_rerank", False):
@@ -219,7 +219,7 @@ def _retriever(args):
 
     spec = (getattr(args, "sources", None) or "auto").strip()
     if spec == "auto":
-        from .router import MultiSourceRetriever
+        from .rag.router import MultiSourceRetriever
 
         return MultiSourceRetriever(cfg=cfg)
 
@@ -229,13 +229,13 @@ def _retriever(args):
             index=Stm32Index(collection=SOURCE_COLLECTIONS.get(names[0], names[0])), cfg=cfg
         )
 
-    from .router import MultiSourceRetriever
+    from .rag.router import MultiSourceRetriever
 
     return MultiSourceRetriever(sources=names, cfg=cfg)
 
 
 def cmd_ask(args) -> int:
-    from .answer import answer
+    from .rag.answer import answer
 
     retriever = _retriever(args)
     result = answer(args.question, retriever=retriever, with_figures=args.with_figures)
@@ -252,7 +252,7 @@ def cmd_ask(args) -> int:
 
 
 def cmd_eval(args) -> int:
-    from .evaluate import check_anchors, load_cases, run_eval
+    from .rag.evaluate import check_anchors, load_cases, run_eval
 
     cases = load_cases(args.cases) if args.cases else load_cases()
     retriever = _retriever(args)
@@ -273,8 +273,8 @@ def cmd_eval(args) -> int:
 
 def cmd_eval_graph(args) -> int:
     """跨语料 A/B：看「期望来源」有没有被图谱扩展拉进 top-k。"""
-    from .evaluate import load_function_cases, run_cross_source_eval
-    from .router import MultiSourceRetriever
+    from .rag.evaluate import load_function_cases, run_cross_source_eval
+    from .rag.router import MultiSourceRetriever
 
     cases = load_function_cases(args.cases) if args.cases else load_function_cases()
 
@@ -301,7 +301,7 @@ def cmd_eval_graph(args) -> int:
 # ---------------------------------------------------------------- 开发助手
 
 def cmd_scaffold(args) -> int:
-    from .scaffold import scaffold_project
+    from .gen.scaffold import scaffold_project
 
     modules = tuple(item.strip() for item in args.modules.split(",") if item.strip())
     result = scaffold_project(args.dest, device=args.device, name=args.name, modules=modules)
@@ -312,8 +312,8 @@ def cmd_scaffold(args) -> int:
 
 
 def cmd_codegen(args) -> int:
-    from .pipeline import parse_requirement
-    from .codegen import plan_application, spec_summary
+    from .build.pipeline import parse_requirement
+    from .gen.codegen import plan_application, spec_summary
 
     spec, notes, points = parse_requirement(args.requirement, device=args.device)
     plan = plan_application(spec)
@@ -361,7 +361,7 @@ def cmd_codegen(args) -> int:
 
 
 def cmd_develop(args) -> int:
-    from .pipeline import develop
+    from .build.pipeline import develop
 
     delivery = develop(
         args.requirement,
@@ -378,7 +378,7 @@ def cmd_develop(args) -> int:
 
 
 def cmd_agent(args) -> int:
-    from .agent import DevAssistant
+    from .assistant.agent import DevAssistant
 
     assistant = DevAssistant(
         workspace=args.workspace,
@@ -392,8 +392,8 @@ def cmd_agent(args) -> int:
 
 
 def cmd_build_project(args) -> int:
-    from .keil import KeilBuilder
-    from .project import find_project
+    from .build.keil import KeilBuilder
+    from .gen.project import find_project
 
     if args.project:
         project = Path(args.project)
@@ -413,7 +413,7 @@ def cmd_build_project(args) -> int:
 
 
 def cmd_project(args) -> int:
-    from .project import KeilProject, find_project
+    from .gen.project import KeilProject, find_project
 
     if args.project:
         project = Path(args.project)
@@ -426,7 +426,7 @@ def cmd_project(args) -> int:
     obj = KeilProject(project)
     print(obj.describe())
     root = obj.dir.parent
-    from .cubemx import find_ioc, parse_ioc
+    from .gen.cubemx import find_ioc, parse_ioc
 
     ioc = find_ioc(root)
     if ioc is not None:
@@ -448,7 +448,7 @@ def cmd_mcp(args) -> int:
 
 def cmd_graph(args) -> int:
     """器件知识图谱（Neo4j）：建图 / 结构化查询 / 与 mcu.py 互验。"""
-    from .graph import GraphStore
+    from .graphs.graph import GraphStore
 
     try:
         store = GraphStore()
@@ -505,7 +505,7 @@ def cmd_graph(args) -> int:
 
 def cmd_graph_docs(args) -> int:
     """文档知识图谱（GraphRAG）：建图 / 符号查询 / 邻域扩展。"""
-    from .graph_docs import DocGraphStore
+    from .graphs.graph_docs import DocGraphStore
 
     try:
         store = DocGraphStore()
