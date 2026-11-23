@@ -37,7 +37,20 @@ from .rag.retrieve import BM25, Hit, HybridRetriever, tokenize
 from .graphs.graph import GraphResult, GraphStore, graph_available
 from .graphs.graph_docs import DocGraphResult, DocGraphStore, doc_graph_available
 
-from .gen.codegen import AppSpec, CodePlan, GpioSpec, PwmSpec, TimerSpec, UartSpec, plan_application
+from .gen.codegen import (
+    AdcSpec,
+    AppSpec,
+    BuzzerSpec,
+    CodePlan,
+    GpioSpec,
+    KeySpec,
+    OledSpec,
+    PwmSpec,
+    SerialCmdSpec,
+    TimerSpec,
+    UartSpec,
+    plan_application,
+)
 from .gen.cubemx import CubeMXInfo, PatchResult, apply_to_project, parse_ioc, find_ioc
 from .gen.mcu import Device, Pin, pwm_timing, resolve_device, timer_clock, uart_brr
 from .gen.project import KeilProject, ProjectFile, find_project
@@ -50,12 +63,14 @@ from .assistant.agent import AgentResult, DevAssistant
 from .assistant.tools import WorkspaceSession
 
 __all__ = [
+    "AdcSpec",
     "AgentResult",
     "AppSpec",
     "BM25",
     "BuildConfig",
     "BuildIssue",
     "BuildResult",
+    "BuzzerSpec",
     "CodePlan",
     "CubeMXInfo",
     "Delivery",
@@ -71,6 +86,8 @@ __all__ = [
     "HybridRetriever",
     "KeilBuilder",
     "KeilProject",
+    "KeySpec",
+    "OledSpec",
     "Pin",
     "ProjectFile",
     "PatchResult",
@@ -78,6 +95,7 @@ __all__ = [
     "RagAnswer",
     "RetrieveConfig",
     "Section",
+    "SerialCmdSpec",
     "Stm32Index",
     "TimerSpec",
     "UartSpec",

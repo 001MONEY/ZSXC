@@ -127,13 +127,17 @@ HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 | 能力 | 需求示例 | 状态 |
 | --- | --- | --- |
 | GPIO 输出 | `PC13 每 500ms 翻转` | ✅ |
-| GPIO 输入 / 外部中断 | `按键接 PA0，下降沿中断` | ✅（无消抖组件） |
-| TIM PWM | `PA8 输出 1MHz PWM` | ✅ 单通道/定时器 |
+| GPIO 输入 / 外部中断 | `按键接 PA0，下降沿中断` | ✅ |
+| TIM PWM | `PA8、PA11 输出 1kHz PWM` | ✅ 同一定时器多通道（同频） |
 | TIM 更新中断 | `TIM2 产生 1kHz 中断，翻转 PA5` | ✅ |
 | USART 发送 | `USART1 115200 每秒打印 Hello` | ✅ 轮询 / DMA |
-| USART 接收 / 命令行 | — | ❌ 待做 |
-| ADC（电位器） | — | ❌ 待做 |
-| I2C / SPI（OLED 等） | — | ❌ 待做 |
+| USART 接收 / 命令行 | `USART1 串口命令行` | ✅ 中断接收 + 256 B 环形缓冲 + 行解析 |
+| 按键（消抖） | `按键 PB12 PB13 PB14 PB15` | ✅ 20 ms 消抖组件 |
+| 无源蜂鸣器 | `蜂鸣器 PB0` | ✅ 音调表 + 非阻塞 `Buzzer_Tone` |
+| ADC（电位器） | `电位器 PA0` | ✅ ADC + DMA + 滑动平均 |
+| I2C / OLED | `OLED 显示` | ✅ SSD1306 驱动 + 8x16 ASCII 字库 + 绘图 API |
+| 1 ms 调度骨架 | `1ms 调度` | ✅ `Sched_Add/Run`（基于 Hal_GetTick） |
+| SPI / CAN | — | ❌ 待做 |
 | 编码器 / 输入捕获 | — | ❌ 待做 |
 
 工程类型：
@@ -602,25 +606,38 @@ CubeMX 工程里额外有 `.stm32rag/spec.json`（多轮累积的规格）。
 
 ### 11.1 边界
 
-1. **外设范围**：GPIO（输出/输入/外部中断）、TIM PWM（单通道/定时器）、TIM 更新中断、USART 发送（轮询/DMA）。
-   ADC、I2C、SPI、CAN、USART 接收、同一定时器多通道明确未支持，会在结果里说明；
-2. **整文件生成**：`generate_application` 适合从零建工程；CubeMX 工程用增量模式，其他已有工程用
+1. **外设范围**：GPIO（输出/输入/外部中断）、TIM PWM（同一定时器多通道，共频）、TIM 更新中断、
+   USART（发送轮询/DMA，接收中断+命令行）、ADC1（DMA + 滑动平均）、I2C1/I2C2 主发（SSD1306）、
+   以及按键 / 蜂鸣器 / 1 ms 调度等应用层组件。SPI、CAN、编码器接口、输入捕获、USART 的 DMA 接收未支持；
+   **同一定时器的不同通道必须同频**（共享 PSC/ARR）；
+2. **应用层组件只在新建工程模式生成**：CubeMX 增量模式（往 USER CODE 段插）不支持组件文件；
+3. **整文件生成**：`generate_application` 适合从零建工程；CubeMX 工程用增量模式，其他已有工程用
    `read_source` + `write_source` + 编译验证；
-3. **不回写 `.ioc`**（波特率除外）；
-4. **不做烧录**：本机 DFP 的 Flash 算法目录为空，`UV4 -f` 不可用；工程保留 ST-Link 配置，用 µVision 下载即可；
-5. **器件表只覆盖 F103 常见型号**（C8 / RB / RC / VE / ZE）；
-6. **`develop` 的需求解析是规则驱动**：只认“引脚 + 频率/占空比/波特率 + 关键词”，更自由的说法用 `agent`；
-7. **嵌入维度固定**：换 `STM32_EMBED_MODEL` / `STM32_EMBED_DIM` 必须换集合名重建。
+4. **不回写 `.ioc`**（波特率除外）；
+5. **不做烧录**：本机 DFP 的 Flash 算法目录为空，`UV4 -f` 不可用；工程保留 ST-Link 配置，用 µVision 下载即可
+   （网盘 `工具软件\STLINK Utility` / `FlyMcu` 可代替）；
+6. **器件表只覆盖 F103 常见型号**（C8 / RB / RC / VE / ZE）；
+7. **`develop` 的需求解析是规则驱动**：只认“引脚 + 频率/占空比/波特率 + 关键词”，
+   组件引脚取“关键词之后出现的引脚”；更自由的说法用 `agent` 或直接给 JSON 规格；
+8. **嵌入维度固定**：换 `STM32_EMBED_MODEL` / `STM32_EMBED_DIM` 必须换集合名重建。
 
 ### 11.2 后续路线（按板子需求排序）
 
 板子配置：4 个按键（低电平有效）、电位器（ADC）、无源蜂鸣器（PWM）、SSD1306 0.96" OLED（I2C）。
 
-| 阶段 | 内容 |
-| --- | --- |
-| P0 | 同一定时器多通道 PWM；CubeMX 已配外设的追加通道；USART 接收 + 环形缓冲 + 命令行；按键消抖组件；蜂鸣器音调表 |
-| P1 | ADC 旋钮（DMA + 滑动平均）；SSD1306 I2C 驱动（ASCII）；`app.c` 1 ms 节拍调度骨架 |
-| P2 | 菜单/页面框架；图形 API；串口自检固件；烧录工具接入（DFP Flash / STM32CubeProgrammer / pyOCD） |
+| 阶段 | 内容 | 状态 |
+| --- | --- | --- |
+| P0 | 同一定时器多通道 PWM | ✅ 按 TIM 归并，共享 PSC/ARR |
+| P0 | CubeMX 已配外设的追加通道 | ❌ 仍需在 CubeMX 里加通道 |
+| P0 | USART 接收 + 环形缓冲 + 命令行 | ✅ `serial_cmd.c`（help/info/echo + 自定义 handler） |
+| P0 | 按键消抖组件 | ✅ `key.c`（20 ms 消抖，位图返回） |
+| P0 | 蜂鸣器音调表 | ✅ `buzzer.c`（十二平均律音名，非阻塞） |
+| P1 | ADC 旋钮（DMA + 滑动平均） | ✅ `adc_knob.c` |
+| P1 | SSD1306 I2C 驱动（ASCII） | ✅ `oled_ssd1306.c` + 8x16 字库（来源可用 `STM32_FONT_SRC` 覆盖） |
+| P1 | `app.c` 1 ms 节拍调度骨架 | ✅ `app_sched.c`（`Sched_Add` 注册周期任务） |
+| P2 | 菜单/页面框架 | ❌ 已有像素/进度条/字符串基础绘图，菜单未做 |
+| P2 | 串口自检固件 | ✅ 命令行内置 `help/info/echo`，可注册自定义命令 |
+| P2 | 烧录工具接入 | ❌ 按需求暂不做 |
 
 ---
 

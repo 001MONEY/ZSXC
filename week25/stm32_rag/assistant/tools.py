@@ -304,14 +304,21 @@ class WorkspaceSession:
             """按结构化规格生成 main.c / main.h / stm32f1xx_it.c，并同步工程配置。
 
             specs_json 示例：
-            {"device":"STM32F103RB","sysclk":72000000,
-             "pwm":[{"pin":"PA8","freq_hz":1000000,"duty":0.5}],
+            {"device":"STM32F103C8T6",
+             "pwm":[{"pin":"PA8","freq_hz":1000},{"pin":"PA11","freq_hz":1000}],
              "gpio":[{"pin":"PC13","mode":"output_pp","initial":"high"}],
              "uart":[{"instance":"USART1","baud":115200,"dma":false,"printf":true}],
              "timers":[{"timer":"TIM2","freq_hz":1000,"toggle_pin":"PA5"}],
-             "loop":{"kind":"toggle","pin":"PC13","interval_ms":500,"message":""}}
+             "keys":{"pins":["PB12","PB13"],"debounce_ms":20},
+             "buzzer":{"pin":"PB0"},
+             "serial_cmd":{"instance":"USART1"},
+             "adc":{"pin":"PA0","samples":8},
+             "oled":{"instance":"I2C1"},
+             "sched":true,
+             "loop":{"kind":"toggle","pin":"PC13","interval_ms":500}}
 
-            字段都可省略；引脚写 PA8 这种形式。生成器会先校验引脚复用与分频再写文件。
+            字段都可省略；引脚写 PA8 这种形式。同一个 TIM 的多个通道必须同频。
+            生成器会先校验引脚复用、PWM 通道、ADC 通道与 I2C 实例，再写文件。
             """
             return session.generate(specs_json)
 

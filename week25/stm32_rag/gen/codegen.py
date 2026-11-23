@@ -18,10 +18,13 @@ from dataclasses import dataclass, field
 
 from .mcu import (
     ADVANCED_TIMERS,
+    I2C_PINS,
     USART_PINS,
     Device,
     Pin,
     Timing,
+    adc_channel_of_pin,
+    device_i2cs,
     dma_channel,
     dma_irq,
     gpio_clock_ok,
@@ -87,6 +90,50 @@ class LoopSpec:
 
 
 @dataclass
+class KeySpec:
+    """按键组件：低电平有效，横跨扫描 + 20 ms 消抖。"""
+
+    pins: list[Pin] = field(default_factory=list)
+    active_low: bool = True
+    debounce_ms: int = 20
+
+
+@dataclass
+class BuzzerSpec:
+    """无源蜂鸣器：占用一个 PWM 通道，运行时改频率。"""
+
+    pin: Pin = field(default_factory=lambda: Pin("B", 0))
+    timer: str = ""
+    channel: str = ""
+
+
+@dataclass
+class SerialCmdSpec:
+    """串口命令行：中断接收 + 环形缓冲 + 行解析。"""
+
+    instance: str = "USART1"
+
+
+@dataclass
+class AdcSpec:
+    """ADC 旋钮：DMA 循环采样 + 滑动平均。"""
+
+    pin: Pin = field(default_factory=lambda: Pin("A", 0))
+    samples: int = 8
+    label: str = "旋钮"
+
+
+@dataclass
+class OledSpec:
+    """SSD1306 0.96\" OLED（硬件 I2C）。"""
+
+    instance: str = "I2C1"
+    address: int = 0x78
+    width: int = 128
+    height: int = 64
+
+
+@dataclass
 class AppSpec:
     """一次生成请求的全部输入。"""
 
@@ -98,6 +145,12 @@ class AppSpec:
     uarts: list[UartSpec] = field(default_factory=list)
     timers: list[TimerSpec] = field(default_factory=list)
     loop: LoopSpec | None = None
+    keys: KeySpec | None = None
+    buzzer: BuzzerSpec | None = None
+    serial_cmd: SerialCmdSpec | None = None
+    adc: AdcSpec | None = None
+    oled: OledSpec | None = None
+    sched: bool = False
     title: str = "app"
 
     def all_pins(self) -> list[Pin]:
@@ -107,6 +160,12 @@ class AppSpec:
         for timer in self.timers:
             if timer.toggle_pin:
                 pins.append(timer.toggle_pin)
+        if self.keys:
+            pins.extend(self.keys.pins)
+        if self.buzzer:
+            pins.append(self.buzzer.pin)
+        if self.adc:
+            pins.append(self.adc.pin)
         return list(dict.fromkeys(pins))
 
 
@@ -209,6 +268,111 @@ def validate(spec: AppSpec) -> tuple[list[str], list[str], list[str]]:
         elif not any(item.pin == spec.loop.pin for item in spec.gpios):
             warnings.append(f"主循环要翻转 {spec.loop.pin.name}，但没有为它生成 GPIO 输出配置，已自动补上")
 
+    # ---- 同一定时器多通道：频率必须一致，通道不能重叠
+    pwm_groups: dict[str, list[tuple[str, Pin, float]]] = {}
+    for pwm in spec.pwm:
+        picked = timer_for_pin(pwm.pin, spec.device, prefer=pwm.timer or None)
+        if picked is None:
+            continue
+        timer, channel = (pwm.timer, pwm.channel) if pwm.timer and pwm.channel else picked
+        pwm_groups.setdefault(timer, []).append((channel, pwm.pin, pwm.freq_hz))
+    for timer, items in pwm_groups.items():
+        freqs = sorted({round(item[2], 3) for item in items})
+        if len(freqs) > 1:
+            text = "、".join(_fmt_hz(freq) for freq in freqs)
+            errors.append(f"{timer} 被要求输出 {text}：同一定时器只能有一个频率（共享 PSC/ARR）")
+        seen: dict[str, str] = {}
+        for channel, pin, _ in items:
+            if channel in seen:
+                errors.append(f"{timer}_{channel} 被 {seen[channel]} 和 {pin.name} 同时占用")
+            seen[channel] = pin.name
+        if len(items) > 1:
+            checks.append(
+                f"{timer} 多通道：{', '.join(f'{ch}={pin.name}' for ch, pin, _ in items)}"
+                f"（PSC/ARR 共用，占空比各自独立）"
+            )
+
+    # ---- 应用层组件
+    if spec.keys is not None:
+        if not spec.keys.pins:
+            errors.append("按键组件没有给引脚")
+        if len(spec.keys.pins) > 8:
+            errors.append("按键组件最多支持 8 个键")
+        else:
+            checks.append(
+                "按键："
+                + "、".join(pin.name for pin in spec.keys.pins)
+                + f"（{'低' if spec.keys.active_low else '高'}电平有效，{spec.keys.debounce_ms} ms 消抖）"
+            )
+    if spec.buzzer is not None:
+        picked = timer_for_pin(spec.buzzer.pin, spec.device, prefer=spec.buzzer.timer or None)
+        if picked is None:
+            errors.append(f"蜂鸣器 {spec.buzzer.pin.name} 没有定时器复用，无法输出音调")
+        else:
+            timer, channel = (
+                (spec.buzzer.timer, spec.buzzer.channel)
+                if spec.buzzer.timer and spec.buzzer.channel
+                else picked
+            )
+            checks.append(f"蜂鸣器 {spec.buzzer.pin.name} → {timer}_{channel}（预分频固定到 1 MHz，ARR 按音名算）")
+    if spec.serial_cmd is not None:
+        if not any(uart.instance == spec.serial_cmd.instance for uart in spec.uarts):
+            errors.append(f"串口命令行需要先配置 {spec.serial_cmd.instance}（在 uart 里加一条）")
+        else:
+            checks.append(f"串口命令行：{spec.serial_cmd.instance} 中断接收 + 256 字节环形缓冲 + 行解析")
+    if spec.adc is not None:
+        channel = adc_channel_of_pin(spec.adc.pin)
+        if channel is None:
+            errors.append(f"{spec.adc.pin.name} 不是 ADC1 的输入脚（可用 PA0~PA7 / PB0 / PB1）")
+        elif not 2 <= spec.adc.samples <= 64:
+            errors.append("滑动平均样本数要在 2~64 之间")
+        else:
+            checks.append(
+                f"ADC1_IN{channel} ← {spec.adc.pin.name}；DMA1_Channel1 循环采样 {spec.adc.samples} 点取平均"
+            )
+    if spec.oled is not None:
+        if spec.oled.instance not in I2C_PINS:
+            errors.append(f"不支持的 I2C 实例：{spec.oled.instance}")
+        elif spec.oled.instance not in device_i2cs(spec.device):
+            errors.append(f"{spec.device.name} 没有引出 {spec.oled.instance} 的默认引脚")
+        else:
+            scl = I2C_PINS[spec.oled.instance]["SCL"].name
+            sda = I2C_PINS[spec.oled.instance]["SDA"].name
+            checks.append(
+                f"OLED：{spec.oled.instance} SCL={scl} / SDA={sda}，地址 0x{spec.oled.address:02X}，"
+                f"{spec.oled.width}x{spec.oled.height}"
+            )
+
+    # ---- 引脚一物多主：先提醒，硬冲突（同一 PWM 通道）上面已经报错
+    usage: dict[str, str] = {}
+
+    def _claim(pin: Pin, owner: str) -> None:
+        if pin.name in usage and usage[pin.name] != owner:
+            warnings.append(f"{pin.name} 同时被「{usage[pin.name]}」和「{owner}」使用，请确认接线")
+        usage.setdefault(pin.name, owner)
+
+    for pwm in spec.pwm:
+        _claim(pwm.pin, "PWM")
+    for gpio in spec.gpios:
+        _claim(gpio.pin, "GPIO")
+    for uart in spec.uarts:
+        for pin in (uart.tx, uart.rx):
+            if pin:
+                _claim(pin, uart.instance)
+    for timer in spec.timers:
+        if timer.toggle_pin:
+            _claim(timer.toggle_pin, f"{timer.timer} 中断")
+    if spec.keys is not None:
+        for pin in spec.keys.pins:
+            _claim(pin, "按键")
+    if spec.buzzer is not None:
+        _claim(spec.buzzer.pin, "蜂鸣器")
+    if spec.adc is not None:
+        _claim(spec.adc.pin, "ADC")
+    if spec.oled is not None and spec.oled.instance in I2C_PINS:
+        for pin in I2C_PINS[spec.oled.instance].values():
+            _claim(pin, "OLED I2C")
+
     if spec.pwm and not spec.device.ports:
         errors.append("器件信息不完整")
     return errors, warnings, checks
@@ -295,53 +459,64 @@ class _Builder:
         self.notes: list[str] = []
         self.modules: set[str] = {"gpio"}
         self.printf_handle: str | None = None
-        self._init_timers: set[str] = set()
+        self.comp_includes: list[str] = []
+        self.msp_adc: list[str] = []
+        self.msp_i2c: list[str] = []
+        # timer -> {channels:[(CHx, pulse)], pins:[Pin], irq:bool, timing:Timing, mode}
+        self.tim_cfg: dict[str, dict] = {}
 
     # ---------------------------------------------- 定时器 / PWM
+    def _tim_entry(self, timer: str) -> dict:
+        entry = self.tim_cfg.get(timer)
+        if entry is None:
+            entry = {"channels": [], "pins": [], "irq": False, "timing": None, "mode": "base"}
+            self.tim_cfg[timer] = entry
+            self.modules.add("tim")
+            handle = f"htim{timer[3:]}"
+            if handle not in "".join(self.handle_decls):
+                self.handle_decls.append(f"TIM_HandleTypeDef {handle};")
+            self._ensure_timer_init(timer)
+        return entry
+
+    def _ensure_timer_init(self, timer: str) -> None:
+        proto = f"static void MX_{timer}_Init(void);"
+        if proto not in self.init_protos:
+            self.init_protos.append(proto)
+            self.main_init_calls.append(f"  MX_{timer}_Init();")
+
     def add_pwm(self, pwm: PwmSpec) -> None:
         picked = timer_for_pin(pwm.pin, self.spec.device, prefer=pwm.timer or None)
         timer, channel = (pwm.timer, pwm.channel) if pwm.timer and pwm.channel else picked  # type: ignore[misc]
         tim_clk, source = timer_clock(timer, self.spec.sysclk)
         timing = pwm_timing(tim_clk, pwm.freq_hz, pwm.duty)
-        self.modules.add("tim")
-
+        entry = self._tim_entry(timer)
+        entry["timing"] = timing
+        entry["mode"] = "pwm" if entry["mode"] == "base" else entry["mode"]
+        entry["channels"].append((channel, timing.pulse))
+        if pwm.pin not in entry["pins"]:
+            entry["pins"].append(pwm.pin)
         handle = f"htim{timer[3:]}"
-        if handle not in "".join(self.handle_decls):
-            self.handle_decls.append(f"TIM_HandleTypeDef {handle};")
-        self._ensure_timer_init(timer)
-        self.init_funcs.append(self._pwm_init(timer, channel, timing, [pwm.pin]))
         self.start_calls.append(
             f"  /* {pwm.pin.name} → {timer}_{channel}：{_fmt_hz(pwm.freq_hz)}，占空比 {pwm.duty * 100:g}% */\n"
             f"  if (HAL_TIM_PWM_Start(&{handle}, TIM_CHANNEL_{channel[2:]}) != HAL_OK)\n"
             "  {\n    Error_Handler();\n  }"
         )
-        if not self.inline_msp:
-            self._ensure_tim_msp(timer, [pwm.pin])
         self.notes.append(f"{pwm.pin.name} → {timer}_{channel}；{source}；{timing.describe(pwm.freq_hz)}")
 
     def add_timer(self, timer_spec: TimerSpec) -> None:
         timer = timer_spec.timer
-        self.modules.add("tim")
+        entry = self._tim_entry(timer)
         handle = f"htim{timer[3:]}"
-        if handle not in "".join(self.handle_decls):
-            self.handle_decls.append(f"TIM_HandleTypeDef {handle};")
-        self._ensure_timer_init(timer)
         tim_clk, source = timer_clock(timer, self.spec.sysclk)
         timing = pwm_timing(tim_clk, timer_spec.freq_hz, 0.5)
-        self.init_funcs.append(self._base_timer_init(timer, timing))
+        if entry["timing"] is None:
+            entry["timing"] = timing
+        entry["irq"] = True
         self.start_calls.append(
             f"  /* {timer} 更新中断：{_fmt_hz(timer_spec.freq_hz)} */\n"
             f"  if (HAL_TIM_Base_Start_IT(&{handle}) != HAL_OK)\n"
             "  {\n    Error_Handler();\n  }"
         )
-        irq = f"{timer}_UP_IRQn" if timer in ADVANCED_TIMERS else f"{timer}_IRQn"
-        if not self.inline_msp:
-            self._ensure_tim_msp(timer, [], irq=irq)
-        else:
-            self.nvic.append(f"  HAL_NVIC_SetPriority({irq}, 1, 0);\n  HAL_NVIC_EnableIRQ({irq});")
-            if "static void MX_NVIC_Init(void);" not in self.init_protos:
-                self.init_protos.append("static void MX_NVIC_Init(void);")
-                self.main_init_calls.append("  MX_NVIC_Init();")
         handler = f"{timer}_UP_IRQHandler" if timer in ADVANCED_TIMERS else f"{timer}_IRQHandler"
         self.it_handlers.append(
             f"/* {timer} 更新中断 */\nvoid {handler}(void)\n{{\n  HAL_TIM_IRQHandler(&{handle});\n}}"
@@ -358,23 +533,50 @@ class _Builder:
             )
         self.notes.append(f"{timer} 更新中断：{source}；{timing.describe(timer_spec.freq_hz)}")
 
-    def _ensure_timer_init(self, timer: str) -> None:
-        proto = f"static void MX_{timer}_Init(void);"
-        if proto not in self.init_protos:
-            self.init_protos.append(proto)
-            self.main_init_calls.append(f"  MX_{timer}_Init();")
-        self._init_timers.add(timer)
+    def add_buzzer(self, buzzer: BuzzerSpec) -> None:
+        """蜂鸣器只占一个 PWM 通道，频率运行时改，所以初始化用 1 kHz 占位。"""
+        picked = timer_for_pin(buzzer.pin, self.spec.device, prefer=buzzer.timer or None)
+        timer, channel = (buzzer.timer, buzzer.channel) if buzzer.timer and buzzer.channel else picked  # type: ignore[misc]
+        tim_clk, source = timer_clock(timer, self.spec.sysclk)
+        timing = pwm_timing(tim_clk, 1000.0, 0.5)
+        entry = self._tim_entry(timer)
+        if entry["timing"] is None:
+            entry["timing"] = timing
+        entry["mode"] = "pwm" if entry["mode"] == "base" else entry["mode"]
+        entry["channels"].append((channel, timing.pulse))
+        if buzzer.pin not in entry["pins"]:
+            entry["pins"].append(buzzer.pin)
+        self.notes.append(f"蜂鸣器 {buzzer.pin.name} → {timer}_{channel}；{source}；播放时改 ARR")
 
-    def _pwm_init(self, timer: str, channel: str, timing: Timing, pins: list[Pin] | None = None) -> str:
+    def finalize(self) -> None:
+        """所有外设登记完再统一发初始化函数：同一 TIM 的多个通道会合进一个 MX_TIMx_Init。"""
+        for timer, entry in self.tim_cfg.items():
+            self.init_funcs.append(self._tim_init_func(timer, entry))
+            irq = f"{timer}_UP_IRQn" if timer in ADVANCED_TIMERS else f"{timer}_IRQn"
+            if entry["irq"]:
+                if self.inline_msp:
+                    self.nvic.append(f"  HAL_NVIC_SetPriority({irq}, 1, 0);\n  HAL_NVIC_EnableIRQ({irq});")
+                    if "static void MX_NVIC_Init(void);" not in self.init_protos:
+                        self.init_protos.append("static void MX_NVIC_Init(void);")
+                        self.main_init_calls.append("  MX_NVIC_Init();")
+                else:
+                    self._ensure_tim_msp(timer, entry["pins"], irq=irq)
+            elif not self.inline_msp:
+                self._ensure_tim_msp(timer, entry["pins"])
+
+    def _tim_init_func(self, timer: str, entry: dict) -> str:
         handle = f"htim{timer[3:]}"
         advanced = timer in ADVANCED_TIMERS
-        pins = list(pins or [])
+        timing: Timing = entry["timing"]
+        channels: list[tuple[str, int]] = entry["channels"]
+        pins: list[Pin] = entry["pins"]
         lines = [
             f"static void MX_{timer}_Init(void)",
             "{",
             "  TIM_ClockConfigTypeDef sClockSourceConfig = {0};",
-            "  TIM_OC_InitTypeDef sConfigOC = {0};",
         ]
+        if channels:
+            lines.append("  TIM_OC_InitTypeDef sConfigOC = {0};")
         if advanced:
             lines.append("  TIM_MasterConfigTypeDef sMasterConfig = {0};")
         if self.inline_msp and pins:
@@ -387,7 +589,7 @@ class _Builder:
             [
                 f"  {handle}.Instance = {timer};",
                 f"  {handle}.Init.Prescaler = {timing.psc};",
-                f"  {handle}.Init.CounterMode = TIM_COUNTERMODE_UP;",
+                "  " + f"{handle}.Init.CounterMode = TIM_COUNTERMODE_UP;",
                 f"  {handle}.Init.Period = {timing.arr};",
                 f"  {handle}.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;",
             ]
@@ -407,74 +609,46 @@ class _Builder:
                 "  {",
                 "    Error_Handler();",
                 "  }",
-                f"  if (HAL_TIM_PWM_Init(&{handle}) != HAL_OK)",
-                "  {",
-                "    Error_Handler();",
-                "  }",
             ]
         )
-        if advanced:
-            lines.append("")
-            lines.append("  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;")
-            lines.append("  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;")
-            lines.append(f"  if (HAL_TIMEx_MasterConfigSynchronization(&{handle}, &sMasterConfig) != HAL_OK)")
+        if channels:
+            lines.append(f"  if (HAL_TIM_PWM_Init(&{handle}) != HAL_OK)")
             lines.append("  {")
             lines.append("    Error_Handler();")
             lines.append("  }")
-        lines.extend(
-            [
-                "",
-                "  sConfigOC.OCMode = TIM_OCMODE_PWM1;",
-                f"  sConfigOC.Pulse = {timing.pulse};",
-                "  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;",
-            ]
-        )
         if advanced:
-            lines.append("  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;")
-            lines.append("  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;")
-            lines.append("  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;")
-        lines.append("  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;")
-        lines.append(
-            f"  if (HAL_TIM_PWM_ConfigChannel(&{handle}, &sConfigOC, TIM_CHANNEL_{channel[2:]}) != HAL_OK)"
-        )
-        lines.append("  {")
-        lines.append("    Error_Handler();")
-        lines.append("  }")
+            lines.extend(
+                [
+                    "",
+                    "  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;",
+                    "  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;",
+                    f"  if (HAL_TIMEx_MasterConfigSynchronization(&{handle}, &sMasterConfig) != HAL_OK)",
+                    "  {",
+                    "    Error_Handler();",
+                    "  }",
+                ]
+            )
+        for channel, pulse in channels:
+            lines.extend(
+                [
+                    "",
+                    "  sConfigOC.OCMode = TIM_OCMODE_PWM1;",
+                    f"  sConfigOC.Pulse = {pulse};",
+                    "  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;",
+                ]
+            )
+            if advanced:
+                lines.append("  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;")
+                lines.append("  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;")
+                lines.append("  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;")
+            lines.append("  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;")
+            lines.append(
+                f"  if (HAL_TIM_PWM_ConfigChannel(&{handle}, &sConfigOC, TIM_CHANNEL_{channel[2:]}) != HAL_OK)"
+            )
+            lines.append("  {")
+            lines.append("    Error_Handler();")
+            lines.append("  }")
         lines.append("}")
-        return "\n".join(lines)
-
-    def _base_timer_init(self, timer: str, timing: Timing) -> str:
-        handle = f"htim{timer[3:]}"
-        lines = [
-            f"static void MX_{timer}_Init(void)",
-            "{",
-            "  TIM_ClockConfigTypeDef sClockSourceConfig = {0};",
-            "",
-        ]
-        if self.inline_msp:
-            lines.append(f"  __HAL_RCC_{timer}_CLK_ENABLE();")
-            lines.append("")
-        lines.extend(
-            [
-                f"  {handle}.Instance = {timer};",
-                f"  {handle}.Init.Prescaler = {timing.psc};",
-                f"  {handle}.Init.CounterMode = TIM_COUNTERMODE_UP;",
-                f"  {handle}.Init.Period = {timing.arr};",
-                f"  {handle}.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;",
-                f"  {handle}.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;",
-                f"  if (HAL_TIM_Base_Init(&{handle}) != HAL_OK)",
-                "  {",
-                "    Error_Handler();",
-                "  }",
-                "",
-                "  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;",
-                f"  if (HAL_TIM_ConfigClockSource(&{handle}, &sClockSourceConfig) != HAL_OK)",
-                "  {",
-                "    Error_Handler();",
-                "  }",
-                "}",
-            ]
-        )
         return "\n".join(lines)
 
     def _ensure_tim_msp(self, timer: str, pins: list[Pin], irq: str | None = None) -> None:
@@ -623,6 +797,151 @@ class _Builder:
                 )
         return lines
 
+    # ---------------------------------------------- ADC / I2C
+    def add_adc(self, adc: AdcSpec) -> None:
+        channel = adc_channel_of_pin(adc.pin)
+        self.modules.update({"adc", "dma"})
+        self.handle_decls.append("ADC_HandleTypeDef hadc1;")
+        self.handle_decls.append("DMA_HandleTypeDef hdma_adc1;")
+        self.init_protos.append("static void MX_ADC1_Init(void);")
+        self.main_init_calls.append("  MX_ADC1_Init();")
+        lines = [
+            "static void MX_ADC1_Init(void)",
+            "{",
+            "  ADC_ChannelConfTypeDef sConfig = {0};",
+        ]
+        if self.inline_msp:
+            lines.append("  GPIO_InitTypeDef GPIO_InitStruct = {0};")
+        lines.append("")
+        if self.inline_msp:
+            lines.extend(line[2:] for line in self._adc_msp_body(adc, channel, declare=False, link="&hadc1"))
+            lines.append("")
+        lines.extend(
+            [
+                "  hadc1.Instance = ADC1;",
+                "  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;",
+                "  hadc1.Init.ContinuousConvMode = ENABLE;",
+                "  hadc1.Init.DiscontinuousConvMode = DISABLE;",
+                "  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;",
+                "  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;",
+                "  hadc1.Init.NbrOfConversion = 1;",
+                "  if (HAL_ADC_Init(&hadc1) != HAL_OK)",
+                "  {",
+                "    Error_Handler();",
+                "  }",
+                "",
+                f"  sConfig.Channel = ADC_CHANNEL_{channel};",
+                "  sConfig.Rank = ADC_REGULAR_RANK_1;",
+                "  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;",
+                "  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)",
+                "  {",
+                "    Error_Handler();",
+                "  }",
+                "}",
+            ]
+        )
+        self.init_funcs.append("\n".join(lines))
+        if not self.inline_msp:
+            body = self._adc_msp_body(adc, channel)
+            self.msp_adc.append("\n".join(["  if (adcHandle->Instance == ADC1)", "  {"] + body + ["  }"]))
+        self.notes.append(f"ADC1_IN{channel} ← {adc.pin.name}；DMA1_Channel1 循环搬运")
+
+    def _adc_msp_body(self, adc: AdcSpec, channel: int, declare: bool = True, link: str = "adcHandle") -> list[str]:
+        lines = [
+            "    __HAL_RCC_ADC1_CLK_ENABLE();",
+            f"    __HAL_RCC_GPIO{adc.pin.port}_CLK_ENABLE();",
+        ]
+        if declare:
+            lines.append("    GPIO_InitTypeDef GPIO_InitStruct = {0};")
+        lines.extend(
+            [
+                "",
+                f"    GPIO_InitStruct.Pin = {adc.pin.pin_macro};",
+                "    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;",
+                "    GPIO_InitStruct.Pull = GPIO_NOPULL;",
+                f"    HAL_GPIO_Init({adc.pin.gpio}, &GPIO_InitStruct);",
+                "",
+                "    __HAL_RCC_DMA1_CLK_ENABLE();",
+                "    hdma_adc1.Instance = DMA1_Channel1;",
+                "    hdma_adc1.Init.Direction = DMA_PERIPH_TO_MEMORY;",
+                "    hdma_adc1.Init.PeriphInc = DMA_PINC_DISABLE;",
+                "    hdma_adc1.Init.MemInc = DMA_MINC_ENABLE;",
+                "    hdma_adc1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;",
+                "    hdma_adc1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;",
+                "    hdma_adc1.Init.Mode = DMA_CIRCULAR;",
+                "    hdma_adc1.Init.Priority = DMA_PRIORITY_LOW;",
+                "    if (HAL_DMA_Init(&hdma_adc1) != HAL_OK)",
+                "    {",
+                "      Error_Handler();",
+                "    }",
+                f"    __HAL_LINKDMA({link}, DMA_Handle, hdma_adc1);",
+            ]
+        )
+        return lines
+
+    def add_i2c(self, oled: OledSpec) -> None:
+        instance = oled.instance
+        pins = I2C_PINS[instance]
+        handle = f"hi2c{instance[3:]}"
+        self.modules.add("i2c")
+        self.handle_decls.append(f"I2C_HandleTypeDef {handle};")
+        self.init_protos.append(f"static void MX_{instance}_Init(void);")
+        self.main_init_calls.append(f"  MX_{instance}_Init();")
+        lines = [
+            f"static void MX_{instance}_Init(void)",
+            "{",
+        ]
+        if self.inline_msp:
+            lines.append("  GPIO_InitTypeDef GPIO_InitStruct = {0};")
+        lines.append("")
+        if self.inline_msp:
+            lines.extend(line[2:] for line in self._i2c_msp_body(oled, declare=False))
+            lines.append("")
+        lines.extend(
+            [
+                f"  {handle}.Instance = {instance};",
+                f"  {handle}.Init.ClockSpeed = {400000 if oled.address else 100000};",
+                f"  {handle}.Init.DutyCycle = I2C_DUTYCYCLE_2;",
+                f"  {handle}.Init.OwnAddress1 = 0;",
+                f"  {handle}.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;",
+                f"  {handle}.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;",
+                f"  {handle}.Init.OwnAddress2 = 0;",
+                f"  {handle}.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;",
+                f"  {handle}.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;",
+                f"  if (HAL_I2C_Init(&{handle}) != HAL_OK)",
+                "  {",
+                "    Error_Handler();",
+                "  }",
+                "}",
+            ]
+        )
+        self.init_funcs.append("\n".join(lines))
+        if not self.inline_msp:
+            body = self._i2c_msp_body(oled)
+            self.msp_i2c.append("\n".join([f"  if (hi2c->Instance == {instance})", "  {"] + body + ["  }"]))
+        self.notes.append(
+            f"{instance}：SCL={pins['SCL'].name}、SDA={pins['SDA'].name}，400 kHz（OLED 地址 0x{oled.address:02X}）"
+        )
+
+    def _i2c_msp_body(self, oled: OledSpec, declare: bool = True) -> list[str]:
+        instance = oled.instance
+        scl = I2C_PINS[instance]["SCL"]
+        sda = I2C_PINS[instance]["SDA"]
+        ports = list(dict.fromkeys([scl.port, sda.port]))
+        lines = [f"    __HAL_RCC_{instance}_CLK_ENABLE();"]
+        for port in ports:
+            lines.append(f"    __HAL_RCC_GPIO{port}_CLK_ENABLE();")
+        if declare:
+            lines.append("    GPIO_InitTypeDef GPIO_InitStruct = {0};")
+        lines.append("")
+        for port in ports:
+            group = [pin for pin in (scl, sda) if pin.port == port]
+            lines.append("    GPIO_InitStruct.Pin = " + " | ".join(pin.pin_macro for pin in group) + ";")
+            lines.append("    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;")
+            lines.append("    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;")
+            lines.append(f"    HAL_GPIO_Init(GPIO{port}, &GPIO_InitStruct);")
+        return lines
+
     # ---------------------------------------------- GPIO / EXTI
     def add_gpio(self, gpio: GpioSpec) -> None:
         if gpio.mode in ("it_rising", "it_falling"):
@@ -670,6 +989,16 @@ class _Builder:
             return ""
         return "void HAL_UART_MspInit(UART_HandleTypeDef *huart)\n{\n" + "\n\n".join(self.msp_uart) + "\n}"
 
+    def _msp_adc_func(self) -> str:
+        if not self.msp_adc:
+            return ""
+        return "void HAL_ADC_MspInit(ADC_HandleTypeDef *adcHandle)\n{\n" + "\n\n".join(self.msp_adc) + "\n}"
+
+    def _msp_i2c_func(self) -> str:
+        if not self.msp_i2c:
+            return ""
+        return "void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)\n{\n" + "\n\n".join(self.msp_i2c) + "\n}"
+
     def _nvic_func(self) -> str:
         if not self.nvic:
             return ""
@@ -695,7 +1024,16 @@ class _Builder:
             "prototypes": "\n".join(prototypes),
             "init_calls": "\n".join(dict.fromkeys(self.main_init_calls)),
             "init_funcs": "\n\n".join(self.init_funcs),
-            "msp": "\n\n".join(item for item in (self._msp_tim_func(), self._msp_uart_func()) if item),
+            "msp": "\n\n".join(
+                item
+                for item in (
+                    self._msp_tim_func(),
+                    self._msp_uart_func(),
+                    self._msp_adc_func(),
+                    self._msp_i2c_func(),
+                )
+                if item
+            ),
             "nvic": self._nvic_func(),
             "start": "\n\n".join(self.start_calls),
             "loop": "\n".join(self.loop_lines),
@@ -709,7 +1047,16 @@ class _Builder:
     def render(self) -> dict[str, str]:
         spec = self.spec
         gpio_init = self._gpio_init()
-        parts = [item for item in (self._msp_tim_func(), self._msp_uart_func()) if item]
+        parts = [
+            item
+            for item in (
+                self._msp_tim_func(),
+                self._msp_uart_func(),
+                self._msp_adc_func(),
+                self._msp_i2c_func(),
+            )
+            if item
+        ]
         msp = ("\n\n".join(parts) + "\n\n" if parts else "") + (
             "void HAL_MspInit(void)\n{\n"
             "  __HAL_RCC_AFIO_CLK_ENABLE();\n"
@@ -731,6 +1078,7 @@ class _Builder:
  * 需要手工补充的逻辑写在 USER CODE 段内。
  */
 #include "main.h"
+{chr(10).join('#include "' + inc + '"' for inc in self.comp_includes)}
 {chr(10).join(line for line in ['#include <stdio.h>'] if self.printf_handle)}
 
 /* 句柄 */
@@ -888,6 +1236,13 @@ def plan_application(spec: AppSpec, inline_msp: bool = False) -> CodePlan:
     errors, warnings, checks = validate(spec)
     if errors:
         return CodePlan(ok=False, errors=errors, warnings=warnings, checks=checks)
+    if inline_msp and (spec.keys or spec.buzzer or spec.serial_cmd or spec.adc or spec.oled or spec.sched):
+        return CodePlan(
+            ok=False,
+            errors=["CubeMX 增量模式暂不支持应用层组件（按键/蜂鸣器/串口命令行/ADC/OLED/调度器）"],
+            warnings=warnings,
+            checks=checks,
+        )
 
     builder = _Builder(spec, inline_msp=inline_msp)
     for pwm in spec.pwm:
@@ -901,7 +1256,121 @@ def plan_application(spec: AppSpec, inline_msp: bool = False) -> CodePlan:
     if spec.loop:
         builder.add_loop(spec.loop)
 
+    # ---- 应用层组件：先补外设初始化，再插组件初始化，顺序即 main() 里的执行顺序
+    if spec.buzzer is not None:
+        builder.add_buzzer(spec.buzzer)
+        builder.comp_includes.append("buzzer.h")
+        builder.main_init_calls.append("  Buzzer_Init();")
+        builder.loop_lines.append("    Buzzer_Task();")
+    if spec.adc is not None:
+        builder.add_adc(spec.adc)
+        builder.comp_includes.append("adc_knob.h")
+        builder.main_init_calls.append("  Adc_Init();")
+        builder.loop_lines.append("    Adc_Task();")
+    if spec.oled is not None:
+        builder.add_i2c(spec.oled)
+        builder.comp_includes.append("oled_ssd1306.h")
+        builder.main_init_calls.append("  OLED_Init();")
+        builder.loop_lines.append("    /* OLED 每 100 ms 刷一帧，避免 I2C 占用主循环 */")
+        builder.loop_lines.append("    {")
+        builder.loop_lines.append("      static uint32_t oled_tick;")
+        builder.loop_lines.append("      if ((HAL_GetTick() - oled_tick) >= 100U)")
+        builder.loop_lines.append("      {")
+        builder.loop_lines.append("        oled_tick = HAL_GetTick();")
+        builder.loop_lines.append('        OLED_ShowString(0, 0, "STM32 ready");')
+        if spec.adc is not None:
+            builder.loop_lines.append('        OLED_Printf(0, 16, "ADC: %3u%%", Adc_GetPercent());')
+            builder.loop_lines.append("        OLED_ProgressBar(0, 40, 100, Adc_GetPercent());")
+        if spec.keys is not None:
+            builder.loop_lines.append('        OLED_Printf(0, 32, "KEY: %02X", Key_Scan());')
+        if spec.serial_cmd is not None:
+            builder.loop_lines.append('        OLED_Printf(0, 48, "CMD: %s", "serial");')
+        builder.loop_lines.append("      }")
+        builder.loop_lines.append("    }")
+    if spec.serial_cmd is not None:
+        instance = spec.serial_cmd.instance
+        irq = f"{instance}_IRQn"
+        handle = f"huart{instance[5:]}"
+        # NVIC 必须先于 SerialCmd_Init（里面会开 HAL_UART_Receive_IT）
+        builder.nvic.append(
+            f"  /* {instance} 接收中断 */\n"
+            f"  HAL_NVIC_SetPriority({irq}, 0, 0);\n  HAL_NVIC_EnableIRQ({irq});"
+        )
+        if "static void MX_NVIC_Init(void);" not in builder.init_protos:
+            builder.init_protos.append("static void MX_NVIC_Init(void);")
+            builder.main_init_calls.append("  MX_NVIC_Init();")
+        builder.comp_includes.append("serial_cmd.h")
+        builder.main_init_calls.append("  SerialCmd_Init();")
+        builder.loop_lines.append("    SerialCmd_Task();")
+        builder.it_handlers.append(
+            f"/* {instance} 接收中断（命令行） */\n"
+            f"void {irq[:-4]}Handler(void)\n{{\n  HAL_UART_IRQHandler(&{handle});\n}}"
+        )
+    if spec.keys is not None:
+        builder.comp_includes.append("key.h")
+        builder.main_init_calls.append("  Key_Init();")
+        builder.loop_lines.append("    (void)Key_Scan();")
+        if spec.buzzer is not None:
+            # 按键 + 蜂鸣器：任何键按下响一声 C5，演示组件协作
+            builder.loop_lines.append("    {")
+            builder.loop_lines.append("      static uint8_t last_keys;")
+            builder.loop_lines.append("      uint8_t now_keys = Key_Scan();")
+            builder.loop_lines.append("      if (now_keys != last_keys)")
+            builder.loop_lines.append("      {")
+            builder.loop_lines.append("        last_keys = now_keys;")
+            builder.loop_lines.append("        if (now_keys != 0U)")
+            builder.loop_lines.append("        {")
+            builder.loop_lines.append("          Buzzer_Tone(NOTE_C5, 60);")
+            builder.loop_lines.append("        }")
+            builder.loop_lines.append("      }")
+            builder.loop_lines.append("    }")
+    if spec.sched:
+        builder.comp_includes.append("app_sched.h")
+        builder.main_init_calls.append("  Sched_Init();")
+        builder.loop_lines.append("    Sched_Run();")
+
+    builder.finalize()
+
     files = builder.render()
+
+    # ---- 应用层组件的 .c/.h 直接落盘
+    from .components import adc_files, buzzer_files, key_files, oled_files, sched_files, serial_cmd_files
+
+    extra: list = []
+    if spec.sched:
+        extra.extend(sched_files())
+    if spec.keys is not None:
+        extra.extend(
+            key_files(
+                [(pin.gpio, pin.pin_macro) for pin in spec.keys.pins],
+                debounce_ms=spec.keys.debounce_ms,
+                active_low=spec.keys.active_low,
+            )
+        )
+    if spec.buzzer is not None:
+        picked = timer_for_pin(spec.buzzer.pin, spec.device, prefer=spec.buzzer.timer or None)
+        timer, channel = (
+            (spec.buzzer.timer, spec.buzzer.channel)
+            if spec.buzzer.timer and spec.buzzer.channel
+            else picked  # type: ignore[misc]
+        )
+        tim_clk, _ = timer_clock(timer, spec.sysclk)
+        extra.extend(buzzer_files(timer, tim_clk, channel))
+    if spec.serial_cmd is not None:
+        uart = next((item for item in spec.uarts if item.instance == spec.serial_cmd.instance), None)
+        baud = uart.baud if uart else 115200
+        cmd_files, _, _ = serial_cmd_files(spec.serial_cmd.instance, baud)
+        extra.extend(cmd_files)
+    if spec.adc is not None:
+        channel = adc_channel_of_pin(spec.adc.pin)
+        if channel is not None:
+            extra.extend(adc_files("ADC1", channel, spec.adc.samples, spec.adc.label))
+    if spec.oled is not None:
+        extra.extend(
+            oled_files(spec.oled.instance, spec.oled.address, spec.oled.width, spec.oled.height)
+        )
+    for item in extra:
+        files[item.path] = item.content
     modules = sorted(builder.modules)
     # validate() 与 builder 都会记录依据，去重后展示更干净
     merged_checks = list(dict.fromkeys(checks + builder.notes))
@@ -934,6 +1403,21 @@ def _wiring(spec: AppSpec) -> list[str]:
     for timer in spec.timers:
         if timer.toggle_pin:
             lines.append(f"{timer.toggle_pin.name}：由 {timer.timer} 更新中断翻转（{_fmt_hz(timer.freq_hz)}）")
+    if spec.keys is not None:
+        lines.append(
+            "按键："
+            + "、".join(pin.name for pin in spec.keys.pins)
+            + " → 另一端接 GND（内部上拉，低电平有效）"
+        )
+    if spec.buzzer is not None:
+        lines.append(f"蜂鸣器 {spec.buzzer.pin.name}：PWM 输出 → 三极管基极，无源蜂鸣器两端接蜂鸣器")
+    if spec.adc is not None:
+        lines.append(f"电位器：两端接 3.3V / GND，中间抽头 → {spec.adc.pin.name}")
+    if spec.oled is not None and spec.oled.instance in I2C_PINS:
+        i2c = I2C_PINS[spec.oled.instance]
+        lines.append(
+            f"OLED：VCC 3.3V、GND，SCL={i2c['SCL'].name}、SDA={i2c['SDA'].name}（模块自带 4.7k 上拉）"
+        )
     if spec.loop and spec.loop.kind == "toggle" and spec.loop.pin:
         lines.append(f"{spec.loop.pin.name}：主循环每 {spec.loop.interval_ms} ms 翻转一次")
     return lines
@@ -1000,6 +1484,37 @@ def spec_to_dict(spec: AppSpec) -> dict:
             if spec.loop
             else None
         ),
+        "keys": (
+            {
+                "pins": [pin.name for pin in spec.keys.pins],
+                "active_low": spec.keys.active_low,
+                "debounce_ms": spec.keys.debounce_ms,
+            }
+            if spec.keys
+            else None
+        ),
+        "buzzer": (
+            {"pin": spec.buzzer.pin.name, "timer": spec.buzzer.timer, "channel": spec.buzzer.channel}
+            if spec.buzzer
+            else None
+        ),
+        "serial_cmd": {"instance": spec.serial_cmd.instance} if spec.serial_cmd else None,
+        "adc": (
+            {"pin": spec.adc.pin.name, "samples": spec.adc.samples, "label": spec.adc.label}
+            if spec.adc
+            else None
+        ),
+        "oled": (
+            {
+                "instance": spec.oled.instance,
+                "address": spec.oled.address,
+                "width": spec.oled.width,
+                "height": spec.oled.height,
+            }
+            if spec.oled
+            else None
+        ),
+        "sched": spec.sched,
     }
 
 
@@ -1069,6 +1584,44 @@ def spec_from_payload(data: dict, device: str | None = None) -> AppSpec:
             interval_ms=int(loop.get("interval_ms") or 500),
             message=str(loop.get("message") or ""),
         )
+    keys = data.get("keys")
+    if keys is not None:
+        pins_list = [_pin_from(str(item)) for item in keys.get("pins") or []]
+        spec.keys = KeySpec(
+            pins=[pin for pin in pins_list if pin is not None],
+            active_low=bool(keys.get("active_low", True)),
+            debounce_ms=int(keys.get("debounce_ms") or 20),
+        )
+    buzzer = data.get("buzzer")
+    if buzzer is not None:
+        pin = _pin_from(str(buzzer.get("pin") or ""))
+        if pin is not None:
+            spec.buzzer = BuzzerSpec(
+                pin=pin,
+                timer=str(buzzer.get("timer") or ""),
+                channel=str(buzzer.get("channel") or ""),
+            )
+    cmd = data.get("serial_cmd")
+    if cmd is not None:
+        spec.serial_cmd = SerialCmdSpec(instance=str(cmd.get("instance") or "USART1").upper())
+    adc = data.get("adc")
+    if adc is not None:
+        pin = _pin_from(str(adc.get("pin") or ""))
+        if pin is not None:
+            spec.adc = AdcSpec(
+                pin=pin,
+                samples=int(adc.get("samples") or 8),
+                label=str(adc.get("label") or "旋钮"),
+            )
+    oled = data.get("oled")
+    if oled is not None:
+        spec.oled = OledSpec(
+            instance=str(oled.get("instance") or "I2C1").upper(),
+            address=int(oled.get("address") or 0x78),
+            width=int(oled.get("width") or 128),
+            height=int(oled.get("height") or 64),
+        )
+    spec.sched = bool(data.get("sched"))
     return spec
 
 
@@ -1104,6 +1657,13 @@ def merge_specs(old: AppSpec | None, new: AppSpec) -> AppSpec:
         merged.loop = new.loop
     elif old.loop is not None:
         merged.loop = old.loop
+
+    merged.keys = new.keys or old.keys
+    merged.buzzer = new.buzzer or old.buzzer
+    merged.serial_cmd = new.serial_cmd or old.serial_cmd
+    merged.adc = new.adc or old.adc
+    merged.oled = new.oled or old.oled
+    merged.sched = new.sched or old.sched
     return merged
 
 

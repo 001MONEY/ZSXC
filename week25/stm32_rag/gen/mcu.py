@@ -242,6 +242,41 @@ def usart_of_pin(pin: Pin) -> tuple[str, str] | None:
     return None
 
 
+# ---------------------------------------------------------------- ADC / I2C
+
+# ADC1 的规则通道与引脚对应（STM32F103x8/B 数据手册「引脚定义」表 5）
+ADC_CHANNELS: dict[str, int] = {
+    "PA0": 0,
+    "PA1": 1,
+    "PA2": 2,
+    "PA3": 3,
+    "PA4": 4,
+    "PA5": 5,
+    "PA6": 6,
+    "PA7": 7,
+    "PB0": 8,
+    "PB1": 9,
+}
+
+
+def adc_channel_of_pin(pin: Pin) -> int | None:
+    """PA1 -> 1；不支持 ADC 的引脚返回 None。"""
+    return ADC_CHANNELS.get(pin.name)
+
+
+# 硬件 I2C 的默认引脚（RM0008 §9.1.11 复用功能表）
+I2C_PINS: dict[str, dict[str, Pin]] = {
+    "I2C1": {"SCL": Pin("B", 6), "SDA": Pin("B", 7)},
+    "I2C2": {"SCL": Pin("B", 10), "SDA": Pin("B", 11)},
+}
+
+
+def device_i2cs(device: Device | None = None) -> list[str]:
+    """这颗封装能用的硬件 I2C（引脚都引出才算）。"""
+    names = {item.name for item in device_pins(device)}
+    return [inst for inst, roles in I2C_PINS.items() if all(pin.name in names for pin in roles.values())]
+
+
 # ---------------------------------------------------------------- DMA
 
 # F103 的 DMA 请求是硬连线的（RM0008 表 14-4）

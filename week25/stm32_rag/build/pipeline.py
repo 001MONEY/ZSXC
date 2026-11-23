@@ -21,17 +21,22 @@ from pathlib import Path
 
 from ..core.config import DEFAULT_DEVICE, DEFAULT_HSE, DEFAULT_SYSCLK, WORKSPACE_ROOT
 from ..gen.codegen import (
+    AdcSpec,
     AppSpec,
+    BuzzerSpec,
     CodePlan,
     GpioSpec,
+    KeySpec,
     LoopSpec,
+    OledSpec,
     PwmSpec,
+    SerialCmdSpec,
     TimerSpec,
     UartSpec,
     plan_application,
     spec_summary,
 )
-from ..gen.mcu import USART_PINS, Pin, resolve_device, timer_for_pin
+from ..gen.mcu import USART_PINS, Pin, adc_channel_of_pin, resolve_device, timer_for_pin
 from ..gen.project import DEFAULT_GROUP, KeilProject, find_project
 from ..gen.scaffold import HAL_MODULE_SOURCES, enable_hal_conf, ensure_hal_modules, scaffold_project
 from .keil import BuildResult, KeilBuilder, QuickFix, suggest_fixes
@@ -157,29 +162,94 @@ def parse_requirement(
         used = {USART_PINS[uart_instance]["TX"][0], USART_PINS[uart_instance]["RX"][0]}
         pins = [pin for pin in pins if pin not in used]
 
-    # ---- PWM / 定时中断
-    if is_pwm or (freq_match and pins and not is_irq):
-        target_pin = pins[0] if pins else Pin("A", 8)
-        if timer_instance:
-            from ..gen.mcu import channel_of_pin
+    # ---- 应用层组件（先抢引脚，剩下的才归 PWM/GPIO）
+    def pins_after(keyword: str) -> list[Pin]:
+        """取关键词之后出现的引脚（“蜂鸣器 PB0”这种写法）。"""
+        match = re.search(keyword, text, re.IGNORECASE)
+        if match is None:
+            return []
+        tail = text[match.start() :]
+        found = [Pin(item.group(1).upper(), int(item.group(2))) for item in _PIN_RE.finditer(tail)]
+        return list(dict.fromkeys(found))
 
-            channel = channel_of_pin(target_pin, timer_instance)
-            if channel is None:
-                # 用户点名了定时器但引脚不支持：保留原样，让 validate() 报明确错误
-                spec.pwm.append(PwmSpec(pin=target_pin, timer=timer_instance, channel="CH1", freq_hz=freq_hz, duty=duty))
+    key_pins = pins_after(r"按键|消抖|key")[:8]
+    if key_pins:
+        spec.keys = KeySpec(pins=key_pins, active_low=True)
+        points.append("按键 " + "、".join(pin.name for pin in key_pins) + "（20 ms 消抖）")
+        pins = [pin for pin in pins if pin not in key_pins]
+    elif re.search(r"按键|消抖", text):
+        key_pins = [Pin("B", 12), Pin("B", 13), Pin("B", 14), Pin("B", 15)]
+        spec.keys = KeySpec(pins=key_pins, active_low=True)
+        notes.append("按键没指定引脚，先用 PB12~PB15（低电平有效），接线确认后改规格即可")
+        points.append("按键 " + "、".join(pin.name for pin in key_pins) + "（20 ms 消抖）")
+
+    if re.search(r"蜂鸣器|音调|beep", text, re.IGNORECASE):
+        buzzer_pins = pins_after(r"蜂鸣器|音调|beep")
+        buzzer_pin = buzzer_pins[0] if buzzer_pins else (pins[0] if pins else Pin("B", 0))
+        if not buzzer_pins and not pins:
+            notes.append("蜂鸣器没指定引脚，默认 PB0（TIM3_CH3）")
+        spec.buzzer = BuzzerSpec(pin=buzzer_pin, timer=timer_instance if timer_instance else "")
+        points.append(f"蜂鸣器 {buzzer_pin.name}（PWM 音调）")
+        pins = [pin for pin in pins if pin != buzzer_pin]
+
+    if spec.uarts and re.search(r"命令行|命令解析|串口接收|接收命令|shell", text, re.IGNORECASE):
+        spec.serial_cmd = SerialCmdSpec(instance=spec.uarts[0].instance)
+        points.append(f"{spec.uarts[0].instance} 命令行（中断接收 + 环形缓冲）")
+
+    if re.search(r"ADC|电位器|旋钮", text, re.IGNORECASE):
+        adc_pins = [pin for pin in pins_after(r"ADC|电位器|旋钮") if adc_channel_of_pin(pin) is not None]
+        adc_pin = adc_pins[0] if adc_pins else next((pin for pin in pins if adc_channel_of_pin(pin) is not None), None)
+        if adc_pin is None:
+            adc_pin = Pin("A", 0)
+            notes.append("ADC 没指定通道，默认 PA0（ADC1_IN0）")
+        samples = 8
+        sample_match = re.search(r"(?:采样|平均)\s*(\d{1,2})\s*(?:点|次)", text)
+        if sample_match:
+            samples = max(2, min(64, int(sample_match.group(1))))
+        spec.adc = AdcSpec(pin=adc_pin, samples=samples, label="旋钮")
+        points.append(f"ADC 旋钮 {adc_pin.name}（DMA + {samples} 点平均）")
+        pins = [pin for pin in pins if pin != adc_pin]
+
+    if re.search(r"OLED|SSD1306|显示屏", text, re.IGNORECASE):
+        spec.oled = OledSpec()
+        points.append("OLED SSD1306（I2C1：PB6/PB7）")
+
+    if re.search(r"调度|节拍|任务", text):
+        spec.sched = True
+        points.append("1 ms 节拍调度骨架（HAL_GetTick）")
+
+    # ---- PWM / 定时中断（支持一次给多个引脚：同频多通道）
+    if is_pwm or (freq_match and pins and not is_irq):
+        targets = list(pins) or [Pin("A", 8)]
+        for target_pin in targets:
+            if timer_instance:
+                from ..gen.mcu import channel_of_pin
+
+                channel = channel_of_pin(target_pin, timer_instance)
+                if channel is None:
+                    # 用户点名了定时器但引脚不支持：保留原样，让 validate() 报明确错误
+                    spec.pwm.append(
+                        PwmSpec(pin=target_pin, timer=timer_instance, channel="CH1", freq_hz=freq_hz, duty=duty)
+                    )
+                else:
+                    spec.pwm.append(
+                        PwmSpec(pin=target_pin, timer=timer_instance, channel=channel, freq_hz=freq_hz, duty=duty)
+                    )
+                    points.append(f"{target_pin.name} → {timer_instance}_{channel}")
             else:
-                spec.pwm.append(PwmSpec(pin=target_pin, timer=timer_instance, channel=channel, freq_hz=freq_hz, duty=duty))
-                points.append(f"{target_pin.name} → {timer_instance}_{channel}")
-        else:
-            options = timer_for_pin(target_pin, dev)
-            if options is None:
-                spec.pwm.append(PwmSpec(pin=target_pin, timer="TIM1", channel="CH1", freq_hz=freq_hz, duty=duty))
-                notes.append(f"{target_pin.name} 在这颗封装里没有定时器复用")
-            else:
-                timer, channel = options
-                spec.pwm.append(PwmSpec(pin=target_pin, timer=timer, channel=channel, freq_hz=freq_hz, duty=duty))
-                points.append(f"{target_pin.name} 自动匹配 {timer}_{channel}")
-        pins = [pin for pin in pins if pin not in [spec.pwm[-1].pin]]
+                options = timer_for_pin(target_pin, dev)
+                if options is None:
+                    spec.pwm.append(
+                        PwmSpec(pin=target_pin, timer="TIM1", channel="CH1", freq_hz=freq_hz, duty=duty)
+                    )
+                    notes.append(f"{target_pin.name} 在这颗封装里没有定时器复用")
+                else:
+                    timer, channel = options
+                    spec.pwm.append(
+                        PwmSpec(pin=target_pin, timer=timer, channel=channel, freq_hz=freq_hz, duty=duty)
+                    )
+                    points.append(f"{target_pin.name} 自动匹配 {timer}_{channel}")
+        pins = [pin for pin in pins if pin not in targets]
 
     # ---- 定时器更新中断
     if is_irq and (timer_match or not is_pwm):
@@ -223,8 +293,6 @@ def parse_requirement(
 
     # ---- 不支持的诉求，明确说出来
     for keyword, hint in (
-        ("ADC", "ADC 采样"),
-        ("I2C", "I2C 通信"),
         ("SPI", "SPI 通信"),
         ("CAN", "CAN 通信"),
         ("USB", "USB 通信"),
@@ -467,8 +535,9 @@ def develop(
 
     # ---- 同步工程配置
     sync_actions = _sync_project_config(workspace, project_obj, plan.modules)
-    for rel in ("Core/Src/main.c", "Core/Src/stm32f1xx_it.c", "Core/Src/system_stm32f1xx.c"):
-        if project_obj.add_file(rel, group=DEFAULT_GROUP if "main" in rel or "it" in rel else "CMSIS"):
+    for rel in sorted(path for path in plan.files if path.startswith("Core/Src/")):
+        group = "CMSIS" if rel.endswith("system_stm32f1xx.c") else DEFAULT_GROUP
+        if project_obj.add_file(rel, group=group):
             sync_actions.append(f"工程新增源码 {rel}")
     startup = workspace / "Core" / "Startup" / spec.device.startup
     if startup.is_file() and project_obj.add_file(f"Core/Startup/{startup.name}", group="Startup"):
